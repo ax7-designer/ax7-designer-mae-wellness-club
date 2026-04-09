@@ -146,7 +146,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Check Admin
             if (addAdminClassBtn) {
-                if (user.email === 'admin@maewellnessclub.com.mx' || user.email === 'alexis.septem@gmail.com') {
+                const adminEmails = [
+                    'jesuscomtreras.666@gmail.com',
+                    'guemesana12@gmail.com',
+                    'admin@maewellnessclub.com.mx',
+                    'alexis.septem@gmail.com'
+                ];
+                if (adminEmails.includes(user.email)) {
                     addAdminClassBtn.style.display = 'inline-block';
                 } else {
                     addAdminClassBtn.style.display = 'none';
@@ -556,4 +562,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (img) img.style.transform = 'scale(1.0)';
         });
     });
+
+    /* -----------------------------------------------
+       7. PRICING TABS SWITCHER
+    ----------------------------------------------- */
+    const pricingTabs = document.querySelectorAll('.btn-pricing-tab');
+    const pricingPanels = document.querySelectorAll('.pricing-panel');
+
+    pricingTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs & panels
+            pricingTabs.forEach(t => t.classList.remove('active'));
+            pricingPanels.forEach(p => p.classList.remove('active'));
+
+            // Add active class to clicked tab
+            tab.classList.add('active');
+
+            // Find matching panel and activate it
+            const targetId = `panel-${tab.dataset.tab}`;
+            const targetPanel = document.getElementById(targetId);
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+            }
+        });
+    });
+
 });
