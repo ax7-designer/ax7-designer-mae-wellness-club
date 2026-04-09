@@ -1613,3 +1613,85 @@ button {
     display: inline-block;
     margin-bottom: 5px;
 }
+
+/* ==========================================
+   PRICING TABS & PANELS
+   ========================================== */
+.btn-pricing-tab {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-secondary);
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-pricing-tab:hover {
+    color: var(--text-light);
+    border-color: rgba(240, 234, 216, 0.4);
+}
+
+.btn-pricing-tab.active {
+    background: var(--accent-gold);
+    color: var(--bg-primary);
+    border-color: var(--accent-gold);
+}
+
+.btn-pricing-tab.vip-tab {
+    border-color: rgba(201, 169, 110, 0.5);
+    color: var(--accent-gold);
+}
+
+.btn-pricing-tab.vip-tab.active {
+    background: var(--accent-gold);
+    color: var(--bg-primary);
+}
+
+.pricing-panel {
+    display: none;
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.pricing-panel.active {
+    display: block;
+}
+
+/* ==========================================
+   PRICING TWEAKS (3 TOP, 2 BOTTOM 5-ITEM REFLOW)
+   ========================================== */
+.pricing-grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 30px !important;
+}
+
+.pricing-grid .price-card {
+    /* Set base width to approx 30% so 3 fit in a row, remaining 2 will wrap and center */
+    flex: 0 1 calc(33.333% - 20px) !important;
+    min-width: 250px;
+    max-width: 320px;
+}
+
+/* Breathing room between price and button */
+.price-card .card-body h4 {
+    margin-bottom: 25px !important;
+}
+
+/* Responsive collapse to 1 column on mobile or 2 columns on tablets */
+@media (max-width: 900px) {
+    .pricing-grid .price-card {
+        flex: 0 1 calc(50% - 15px) !important;
+    }
+}
+@media (max-width: 600px) {
+    .pricing-grid .price-card {
+        flex: 1 1 100% !important;
+        max-width: 100%;
+    }
+}
