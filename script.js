@@ -332,7 +332,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // MOCK DATABASE IN MEMORY
     // Key: Date string (YYYY-MM-DD), Value: Array of class objects
-    const classesDB = {};
+    const classesDB = {
+        [new Date().toISOString().split('T')[0]]: [
+            {
+                id: 'init-1',
+                discipline: 'Pilates Reformer',
+                coachName: 'Silvana',
+                coachImg: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?auto=format&fit=crop&q=80&w=200',
+                note: 'Eleva tu fuerza, alinea tu postura y conecta con tu interior. ⸻',
+                capacity: 4,
+                occupiedSpots: [1, 3] 
+            }
+        ]
+    };
     let selectedDateISO = new Date().toISOString().split('T')[0];
     let selectedClassConfig = null;
     
