@@ -116,63 +116,99 @@
     <section class="pricing" id="pricing">
         <div class="section-container scroll-reveal">
             <h2 class="section-title">Comprar Clases</h2>
-            <p class="section-subtitle">Elige el plan que más se adapte a tu ritmo. Conecta y fluye con nosotros.</p>
+            <p class="section-subtitle">Elige el plan que más se adapte a tu ritmo. Todos los precios se encuentran en MXN.</p>
             
-            <div class="pricing-grid">
-                <!-- Package 1 -->
-                <div class="price-card">
-                    <div class="card-header">
-                        <h3>Primera Clase</h3>
-                        <p>Para nuevos miembros</p>
-                    </div>
-                    <div class="card-body">
-                        <div class="logo-mark"><i class="fa-solid fa-star"></i></div>
-                        <h4>$250 MXN</h4>
-                        <p class="validity">Vigencia 7 días</p>
-                        <a href="TU_LINK_DE_STRIPE_AQUI_1" class="btn-primary" style="display: inline-block; text-align: center; text-decoration: none;">Comprar</a>
-                    </div>
-                </div>
-                <!-- Package 5 -->
-                <div class="price-card">
-                    <div class="card-header">
-                        <h3>5 Clases</h3>
-                        <p>Paquete Básico</p>
-                    </div>
-                    <div class="card-body">
-                        <div class="logo-mark"><i class="fa-solid fa-dumbbell"></i></div>
-                        <h4>$1,200 MXN</h4>
-                        <p class="validity">Vigencia 30 días</p>
-                        <a href="TU_LINK_DE_STRIPE_AQUI_2" class="btn-primary" style="display: inline-block; text-align: center; text-decoration: none;">Comprar</a>
-                    </div>
-                </div>
-                <!-- Package 10 (Best Value) -->
-                <div class="price-card best-value">
-                    <div class="best-value-badge">Más Popular</div>
-                    <div class="card-header">
-                        <h3>10 Clases</h3>
-                        <p>Compromiso Total</p>
-                    </div>
-                    <div class="card-body">
-                        <div class="logo-mark"><i class="fa-solid fa-fire"></i></div>
-                        <h4>$2,200 MXN</h4>
-                        <p class="validity">Vigencia 60 días</p>
-                        <a href="TU_LINK_DE_STRIPE_AQUI_3" class="btn-primary" style="display: inline-block; text-align: center; text-decoration: none;">Comprar</a>
+            <!-- Enlaces de Stripe Educativo para el cliente:
+                 Los href="#stripe_1" etc. serán reemplazados por los verdaderos links de Stripe que tu cliente genere en su dashboard. -->
+
+            <!-- Tabs de Navegación de Precios -->
+            <div class="pricing-tabs-nav" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; flex-wrap: wrap;">
+                <button class="btn-pricing-tab active" data-tab="pilates">Pilates y Train</button>
+                <button class="btn-pricing-tab" data-tab="cycling">Indoor Cycling</button>
+                <button class="btn-pricing-tab vip-tab" data-tab="pass"><i class="fa-solid fa-crown" style="margin-right: 8px;"></i>Pase Mensual</button>
+            </div>
+            
+            <div class="pricing-panels">
+                <!-- PANEL: Pilates y Train -->
+                <div class="pricing-panel active" id="panel-pilates">
+                    <div class="pricing-grid">
+                        <div class="price-card">
+                            <div class="card-header"><h3>Individual</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$250</h4><a href="#stripe_pte_1" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
+                        <div class="price-card">
+                            <div class="card-header"><h3>5 Clases</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$800</h4><a href="#stripe_pte_5" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
+                        <div class="price-card best-value">
+                            <div class="best-value-badge">Más Popular</div>
+                            <div class="card-header"><h3>10 Clases</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$1,400</h4><a href="#stripe_pte_10" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
+                        <div class="price-card">
+                            <div class="card-header"><h3>15 Clases</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$1,800</h4><a href="#stripe_pte_15" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
+                        <div class="price-card">
+                            <div class="card-header"><h3>20 Clases</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$2,000</h4><a href="#stripe_pte_20" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
                     </div>
                 </div>
-                <!-- Package Unlimited -->
-                <div class="price-card">
-                    <div class="card-header">
-                        <h3>Mensualidad</h3>
-                        <p>Acceso Ilimitado</p>
+
+                <!-- PANEL: Indoor Cycling -->
+                <div class="pricing-panel" id="panel-cycling">
+                    <div class="pricing-grid">
+                        <div class="price-card">
+                            <div class="card-header"><h3>Individual</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$250</h4><a href="#stripe_cyc_1" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
+                        <div class="price-card">
+                            <div class="card-header"><h3>5 Clases</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$999</h4><a href="#stripe_cyc_5" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
+                        <div class="price-card best-value">
+                            <div class="best-value-badge">Top Picks</div>
+                            <div class="card-header"><h3>10 Clases</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$1,699</h4><a href="#stripe_cyc_10" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
+                        <div class="price-card">
+                            <div class="card-header"><h3>15 Clases</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$1,999</h4><a href="#stripe_cyc_15" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
+                        <div class="price-card">
+                            <div class="card-header"><h3>20 Clases</h3></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$2,499</h4><a href="#stripe_cyc_20" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="logo-mark"><i class="fa-solid fa-infinity"></i></div>
-                        <h4>$3,500 MXN</h4>
-                        <p class="validity">Facturación Mensual</p>
-                        <a href="TU_LINK_DE_STRIPE_AQUI_4" class="btn-primary" style="display: inline-block; text-align: center; text-decoration: none;">Comprar</a>
+                </div>
+
+                <!-- PANEL: Mensualidad VIP -->
+                <div class="pricing-panel" id="panel-pass">
+                    <div class="pass-vip-card" style="max-width: 700px; margin: 0 auto; background: linear-gradient(145deg, rgba(32,30,27,1) 0%, rgba(20,18,16,1) 100%); border: 1px solid var(--accent-gold); border-radius: 12px; padding: 40px; box-shadow: var(--shadow-gold); text-align: center;">
+                        <h3 style="font-size: 2.2rem; color: var(--accent-gold); margin-bottom: 10px;">Acceso Total</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 30px;">La experiencia definitiva de La Tribu.</p>
+                        
+                        <h4 style="font-size: 3.5rem; color: #fff; margin-bottom: 30px; letter-spacing: 2px;">$3,000 <span style="font-size: 1rem; color: var(--text-muted);">/ mes</span></h4>
+                        
+                        <ul style="list-style: none; text-align: left; max-width: 350px; margin: 0 auto 40px auto; color: var(--text-light); line-height: 2.2;">
+                            <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> Acceso a <strong>todas</strong> las disciplinas</li>
+                            <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> Hasta 30 clases al mes</li>
+                            <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> 3 Bebidas incluidas</li>
+                            <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> 1 Artículo de Merch Exclusiva</li>
+                            <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> Acceso <strong>Gratuito</strong> a la Ludoteca</li>
+                        </ul>
+                        
+                        <a href="#stripe_monthly" class="btn-primary" style="display: inline-block; font-size: 1.1rem; padding: 18px 40px;">Adquirir Membresía VIP</a>
                     </div>
                 </div>
             </div>
+
+            <!-- Vigencia Global Disclaimer -->
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 40px; border-top: 1px solid var(--border-secondary); padding-top: 20px;">
+                * Todos los paquetes por disciplina tienen una vigencia de 30 días. La Membresía VIP (Acceso Total) tiene una vigencia de 40 días.
+            </div>
+
         </div>
     </section>
 
