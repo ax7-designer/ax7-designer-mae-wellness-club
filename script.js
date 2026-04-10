@@ -266,14 +266,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnGoogle) {
         btnGoogle.addEventListener('click', async () => {
-            const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+            const { error } = await supabase.auth.signInWithOAuth({ 
+                provider: 'google',
+                options: { redirectTo: window.location.origin }
+            });
             if (error) alert(`Error conectando con Google: ${error.message}`);
         });
     }
 
     if (btnFacebook) {
         btnFacebook.addEventListener('click', async () => {
-            const { error } = await supabase.auth.signInWithOAuth({ provider: 'facebook' });
+            const { error } = await supabase.auth.signInWithOAuth({ 
+                provider: 'facebook',
+                options: { redirectTo: window.location.origin }
+            });
             if (error) alert(`Error conectando con Facebook: ${error.message}`);
         });
     }
@@ -330,21 +336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const scCoachDiscipline = document.getElementById('scCoachDiscipline');
     const scCoachNote = document.getElementById('scCoachNote');
 
-    // MOCK DATABASE IN MEMORY
-    // Key: Date string (YYYY-MM-DD), Value: Array of class objects
-    const classesDB = {
-        [new Date().toISOString().split('T')[0]]: [
-            {
-                id: 'init-1',
-                discipline: 'Pilates Reformer',
-                coachName: 'Silvana',
-                coachImg: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?auto=format&fit=crop&q=80&w=200',
-                note: 'Eleva tu fuerza, alinea tu postura y conecta con tu interior. ⸻',
-                capacity: 4,
-                occupiedSpots: [1, 3] 
-            }
-        ]
-    };
+    // MOCK DATABASE -> Now empty, we will fetch from Supabase
     let selectedDateISO = new Date().toISOString().split('T')[0];
     let selectedClassConfig = null;
     
@@ -408,9 +400,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Add new Class (Form Submission)
+    // Add new Class (Form Submission to Supabase)
     if (adminClassForm) {
-        adminClassForm.addEventListener('submit', (e) => {
+        adminClassForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const discipline = document.getElementById('adminDiscipline').value;
@@ -418,50 +410,63 @@ document.addEventListener('DOMContentLoaded', async () => {
             const coachImg = document.getElementById('adminCoachImg').value;
             const note = document.getElementById('adminClassNote').value;
             
-            if (!classesDB[selectedDateISO]) {
-                classesDB[selectedDateISO] = [];
+            const { error } = await supabase
+                .from('classes')
+                .insert([{
+                    date: selectedDateISO,
+                    discipline: discipline,
+                    coach_name: coachName,
+                    coach_img: coachImg,
+                    note: note,
+                    capacity: DISCIPLINE_CAPACITY[discipline],
+                    occupied_spots: [] 
+                }]);
+            
+            if (error) {
+                alert(`Error al crear clase: ${error.message}`);
+            } else {
+                adminClassModal.classList.remove('active');
+                adminClassForm.reset();
+                renderDailyClasses();
+                alert('¡Clase programada exitosamente en Superbase!');
             }
-            
-            classesDB[selectedDateISO].push({
-                id: Date.now().toString(),
-                discipline: discipline,
-                coachName: coachName,
-                coachImg: coachImg,
-                note: note,
-                capacity: DISCIPLINE_CAPACITY[discipline],
-                occupiedSpots: [] 
-            });
-            
-            adminClassModal.classList.remove('active');
-            adminClassForm.reset();
-            
-            renderDailyClasses();
-            alert('¡Clase programada exitosamente!');
         });
     }
 
-    function renderDailyClasses() {
+    async function renderDailyClasses() {
         if (!dailyClassesList) return;
         
-        dailyClassesList.innerHTML = '';
+        dailyClassesList.innerHTML = '<p style="text-align:center; color: var(--accent-gold);"><i class="fa-solid fa-spinner fa-spin"></i> Cargando clases...</p>';
         if (selectedClassProfile) selectedClassProfile.style.display = 'none';
         if (spotsGrid) spotsGrid.innerHTML = '';
         
-        const dayClasses = classesDB[selectedDateISO] || [];
+        const { data: dayClasses, error } = await supabase
+            .from('classes')
+            .select('*')
+            .eq('date', selectedDateISO)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            dailyClassesList.innerHTML = `<p style="text-align:center; color: #ff5555;">Error: ${error.message}</p>`;
+            return;
+        }
         
-        if (dayClasses.length === 0) {
+        dailyClassesList.innerHTML = '';
+        
+        if (!dayClasses || dayClasses.length === 0) {
             dailyClassesList.innerHTML = `<p style="text-align:center; color: var(--text-muted); font-style: italic;">No hay clases programadas para este día.</p>`;
             return;
         }
 
         dayClasses.forEach(cls => {
-            const freeCount = cls.capacity - cls.occupiedSpots.length;
+            const occupied = cls.occupied_spots || [];
+            const freeCount = cls.capacity - occupied.length;
             const card = document.createElement('div');
             card.className = 'daily-class-card';
             card.innerHTML = `
                 <div class="daily-class-info">
                     <h4>${cls.discipline}</h4>
-                    <p><i class="fa-solid fa-user"></i> Coach ${cls.coachName}</p>
+                    <p><i class="fa-solid fa-user"></i> Coach ${cls.coach_name}</p>
                 </div>
                 <div class="daily-class-meta">
                     <span class="spots-badge">${freeCount} lugares libres</span>
@@ -481,8 +486,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function showClassDetails(cls) {
         selectedClassConfig = cls;
-        if(scCoachImg) scCoachImg.src = cls.coachImg;
-        if(scCoachName) scCoachName.textContent = `Coach ${cls.coachName}`;
+        if(scCoachImg) scCoachImg.src = cls.coach_img;
+        if(scCoachName) scCoachName.textContent = `Coach ${cls.coach_name}`;
         if(scCoachDiscipline) scCoachDiscipline.textContent = `${cls.discipline} - ${cls.capacity} Lugares`;
         if(scCoachNote) scCoachNote.textContent = cls.note ? `"${cls.note}"` : '';
         if(selectedClassProfile) selectedClassProfile.style.display = 'block';
@@ -495,12 +500,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         spotsGrid.innerHTML = ''; 
         
         const totalCapacity = cls.capacity;
+        const occupied = cls.occupied_spots || [];
         
         for (let i = 1; i <= totalCapacity; i++) {
             const spotDiv = document.createElement('div');
             spotDiv.className = 'spot';
 
-            if (cls.occupiedSpots.includes(i)) {
+            if (occupied.includes(i)) {
                 spotDiv.classList.add('member');
                 spotDiv.innerHTML = `
                     <div class="spot-num">${i}</div>
@@ -513,21 +519,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="spot-num">${i}</div>
                     <div class="status">Reservar</div>
                 `;
-                spotDiv.addEventListener('click', () => {
+                spotDiv.addEventListener('click', async () => {
                     if (currentUser) {
-                        alert(`¡Reservaste el lugar ${i} exitosamente para la clase de ${cls.discipline}!`);
-                        cls.occupiedSpots.push(i);
-                        renderSpotsGrid(cls);
-                        renderDailyClasses();
-                        setTimeout(() => {
-                           // Try to re-select visually finding the card by its name
-                           const cards = document.querySelectorAll('.daily-class-card');
-                           cards.forEach(c => {
-                               if(c.innerHTML.includes(cls.coachName) && c.innerHTML.includes(cls.discipline)) {
-                                   c.classList.add('active');
-                               }
-                           });
-                        }, 50);
+                        spotDiv.style.pointerEvents = 'none';
+                        spotDiv.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                        
+                        const newOccupied = [...occupied, i];
+                        const { data, error } = await supabase
+                            .from('classes')
+                            .update({ occupied_spots: newOccupied })
+                            .eq('id', cls.id)
+                            .select();
+
+                        if (error) {
+                            alert(`Error en la reserva: ${error.message}`);
+                            renderSpotsGrid(cls);
+                        } else {
+                            alert(`¡Reservaste el lugar ${i} exitosamente!`);
+                            const updatedCls = data[0];
+                            renderSpotsGrid(updatedCls);
+                            renderDailyClasses();
+                        }
                     } else {
                         openModal();
                     }
