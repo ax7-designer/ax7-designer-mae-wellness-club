@@ -1,3 +1,9 @@
 .env
 node_modules/
 dist/
+
+# Stripe batch scripts (contain secret keys — never commit these)
+create-stripe-links.mjs
+inject-stripe-links.mjs
+stripe-links.json
+index.html.bak

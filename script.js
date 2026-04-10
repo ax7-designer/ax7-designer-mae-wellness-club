@@ -299,6 +299,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     handleNavScroll();
 
     /* -----------------------------------------------
+       2b. MOBILE HAMBURGER MENU
+    ----------------------------------------------- */
+    const hamburgerBtn  = document.getElementById('hamburgerBtn');
+    const mobileMenu    = document.getElementById('mobileMenu');
+    const mobileClose   = document.getElementById('mobileMenuClose');
+    const mobileLinks   = document.querySelectorAll('.mobile-nav-link');
+
+    function openMobileMenu() {
+        if (!mobileMenu) return;
+        mobileMenu.classList.add('open');
+        mobileMenu.setAttribute('aria-hidden', 'false');
+        hamburgerBtn?.classList.add('open');
+        hamburgerBtn?.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileMenu() {
+        if (!mobileMenu) return;
+        mobileMenu.classList.remove('open');
+        mobileMenu.setAttribute('aria-hidden', 'true');
+        hamburgerBtn?.classList.remove('open');
+        hamburgerBtn?.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = 'auto';
+    }
+
+    if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMobileMenu);
+    if (mobileClose)  mobileClose.addEventListener('click', closeMobileMenu);
+
+    // Close on backdrop click
+    if (mobileMenu) {
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu || e.target === mobileMenu.querySelector('::before')) {
+                closeMobileMenu();
+            }
+            // Close when clicking outside the panel
+            const panel = mobileMenu.querySelector('.mobile-menu-panel');
+            if (panel && !panel.contains(e.target)) closeMobileMenu();
+        });
+    }
+
+    // Close when a nav link is tapped
+    mobileLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            closeMobileMenu();
+        });
+    });
+
+
+
+    /* -----------------------------------------------
        3. SCROLL REVEAL ANIMATIONS
     ----------------------------------------------- */
     const reveals = document.querySelectorAll('.scroll-reveal');

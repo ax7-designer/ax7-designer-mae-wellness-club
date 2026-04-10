@@ -24,21 +24,56 @@
     <header class="navbar" id="navbar">
         <div class="nav-container">
             <div class="logo">
-                <a href="index.html"><img src="MAE%20LOGO%20PNG_x.png" alt="MAE Wellness Club" style="height: 95px;"></a>
+                <a href="index.html">
+                    <img src="MAE%20LOGO%20PNG_x.png" alt="MAE Wellness Club" style="height: 95px;"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="logo-text-fallback" style="display:none;">MAE<span class="logo-sub-fallback">WELLNESS CLUB</span></span>
+                </a>
             </div>
-            <nav class="nav-links">
+            <nav class="nav-links" id="navLinks">
                 <a href="#discipline-cards" class="nav-link">Pilates Reformer</a>
                 <a href="#discipline-cards" class="nav-link">Entrenamiento</a>
                 <a href="#discipline-cards" class="nav-link">Ciclismo Indoor</a>
                 <a href="#schedule" class="nav-link">Horario</a>
+                <a href="#pricing" class="nav-link">Paquetes</a>
+                <a href="contact.html" class="nav-link">Contacto</a>
             </nav>
             <div class="nav-actions">
                 <button class="icon-btn" id="loginBtn" aria-label="Iniciar Sesión">
                     <i class="fa-regular fa-user"></i> <span class="action-text">Iniciar Sesión</span>
                 </button>
+                <!-- Hamburger (mobile only) -->
+                <button class="hamburger" id="hamburgerBtn" aria-label="Menú" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
         </div>
     </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenu" aria-hidden="true">
+        <div class="mobile-menu-panel">
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Cerrar menú">&times;</button>
+            <nav class="mobile-nav-links">
+                <a href="#discipline-cards" class="mobile-nav-link">Pilates Reformer</a>
+                <a href="#discipline-cards" class="mobile-nav-link">Entrenamiento</a>
+                <a href="#discipline-cards" class="mobile-nav-link">Ciclismo Indoor</a>
+                <a href="#schedule" class="mobile-nav-link">Horario</a>
+                <a href="#pricing" class="mobile-nav-link">Paquetes</a>
+                <a href="contact.html" class="mobile-nav-link">Contacto</a>
+            </nav>
+            <div class="mobile-menu-footer">
+                <a href="https://wa.me/526561234567" class="mobile-whatsapp-btn" target="_blank" rel="noopener">
+                    <i class="fa-brands fa-whatsapp"></i> Escríbenos por WhatsApp
+                </a>
+                <div class="mobile-social">
+                    <a href="https://www.instagram.com/maewellnessclub" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="https://www.facebook.com/maewellnessclub" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="https://www.tiktok.com/@maewellnessclub" target="_blank" rel="noopener" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- HERO: Full-screen with animated title + cinematic panels below -->
     <section class="hero-title-section" id="hero">
@@ -134,24 +169,24 @@
                     <div class="pricing-grid">
                         <div class="price-card">
                             <div class="card-header"><h3>Individual</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$250</h4><a href="#stripe_pte_1" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$250</h4><a href="https://buy.stripe.com/6oU28jfKg1q58Pzgou2Ry01" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                         <div class="price-card">
                             <div class="card-header"><h3>5 Clases</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$800</h4><a href="#stripe_pte_5" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$800</h4><a href="https://buy.stripe.com/dRmfZ92Xu8Sx7Lv6NU2Ry02" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                         <div class="price-card best-value">
                             <div class="best-value-badge">Más Popular</div>
                             <div class="card-header"><h3>10 Clases</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$1,400</h4><a href="#stripe_pte_10" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$1,400</h4><a href="https://buy.stripe.com/7sY28jdC87Ot0j31tA2Ry03" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                         <div class="price-card">
                             <div class="card-header"><h3>15 Clases</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$1,800</h4><a href="#stripe_pte_15" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$1,800</h4><a href="https://buy.stripe.com/aFa5kv41y3yd8Pz4FM2Ry04" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                         <div class="price-card">
                             <div class="card-header"><h3>20 Clases</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$2,000</h4><a href="#stripe_pte_20" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$2,000</h4><a href="https://buy.stripe.com/3cI9AL55Cd8Ngi17RY2Ry05" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                     </div>
                 </div>
@@ -161,24 +196,24 @@
                     <div class="pricing-grid">
                         <div class="price-card">
                             <div class="card-header"><h3>Individual</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$250</h4><a href="#stripe_cyc_1" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$250</h4><a href="https://buy.stripe.com/cNibIT2Xud8Nc1Lfkq2Ry06" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                         <div class="price-card">
                             <div class="card-header"><h3>5 Clases</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$999</h4><a href="#stripe_cyc_5" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$999</h4><a href="https://buy.stripe.com/6oUcMXbu0b0FaXH4FM2Ry07" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                         <div class="price-card best-value">
                             <div class="best-value-badge">Top Picks</div>
                             <div class="card-header"><h3>10 Clases</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$1,699</h4><a href="#stripe_cyc_10" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$1,699</h4><a href="https://buy.stripe.com/00w00bfKgc4JaXHc8e2Ry08" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                         <div class="price-card">
                             <div class="card-header"><h3>15 Clases</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$1,999</h4><a href="#stripe_cyc_15" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$1,999</h4><a href="https://buy.stripe.com/00w00b9lS8Sx4zjgou2Ry09" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                         <div class="price-card">
                             <div class="card-header"><h3>20 Clases</h3></div>
-                            <div class="card-body" style="padding-top: 10px;"><h4>$2,499</h4><a href="#stripe_cyc_20" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
+                            <div class="card-body" style="padding-top: 10px;"><h4>$2,499</h4><a href="https://buy.stripe.com/aFafZ91Tq4ChaXH5JQ2Ry0a" class="btn-primary" style="margin-top: 20px;">Comprar</a></div>
                         </div>
                     </div>
                 </div>
@@ -199,7 +234,7 @@
                             <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> Acceso <strong>Gratuito</strong> a la Ludoteca</li>
                         </ul>
                         
-                        <a href="#stripe_monthly" class="btn-primary" style="display: inline-block; font-size: 1.1rem; padding: 18px 40px;">Adquirir Membresía VIP</a>
+                        <a href="https://buy.stripe.com/14AdR17dKc4J7Lv8W22Ry0b" class="btn-primary" style="display: inline-block; font-size: 1.1rem; padding: 18px 40px;">Adquirir Membresía VIP</a>
                     </div>
                 </div>
             </div>
@@ -283,26 +318,111 @@
         </div>
     </section>
 
+    <!-- ==========================================
+         TESTIMONIALS / LA TRIBU SPEAKS
+         ========================================== -->
+    <section class="testimonials" id="testimonials">
+        <div class="section-container scroll-reveal">
+            <h2 class="section-title">La Tribu Habla</h2>
+            <p class="section-subtitle">Historias reales de personas que transformaron su vida con MAE.</p>
+            <div class="testimonials-grid">
+
+                <div class="testimonial-card scroll-reveal" style="--delay: 0s">
+                    <div class="testimonial-quote-icon"><i class="fa-solid fa-quote-left"></i></div>
+                    <p class="testimonial-text">"Antes odiaba el ejercicio. Ahora no puedo imaginar mis semanas sin mis clases de Pilates Reformer. MAE cambió completamente mi relación con mi cuerpo."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar" style="background: linear-gradient(135deg, #c9a96e, #9a7a4a);">
+                            <i class="fa-solid fa-leaf"></i>
+                        </div>
+                        <div>
+                            <strong>Sofía R.</strong>
+                            <span>Pilates Reformer · 8 meses</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card scroll-reveal" style="--delay: 0.1s">
+                    <div class="testimonial-quote-icon"><i class="fa-solid fa-quote-left"></i></div>
+                    <p class="testimonial-text">"El ambiente en MAE es único. Las coaches te exigen al 100% pero siempre con cariño. El indoor cycling aquí es otro nivel — música, energía y comunidad."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar" style="background: linear-gradient(135deg, #c9a96e, #8a6530);">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <div>
+                            <strong>Carlos M.</strong>
+                            <span>Indoor Cycling · 1 año</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card scroll-reveal" style="--delay: 0.2s">
+                    <div class="testimonial-quote-icon"><i class="fa-solid fa-quote-left"></i></div>
+                    <p class="testimonial-text">"Llegué buscando bajar de peso. Me quedé por la comunidad. La Tribu de MAE se convirtió en mi segunda familia. Aquí no entrenas solo."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar" style="background: linear-gradient(135deg, #e8c992, #c9a96e);">
+                            <i class="fa-solid fa-fire"></i>
+                        </div>
+                        <div>
+                            <strong>Valeria T.</strong>
+                            <span>Train + Pilates · 6 meses</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="footer">
-        <div class="footer-content section-container">
-            <div class="footer-brand">
-                <img src="MAE%20LOGO%20PNG_x.png" alt="MAE Wellness Club" style="height: 63px; margin-bottom: 15px;">
-                <p>&copy; 2026 MAE Wellness Club.</p>
-            </div>
-            <div class="footer-links">
-                <a href="privacy.html">Políticas de Privacidad</a>
-                <a href="terms.html">Términos y Condiciones</a>
-                <a href="tribe.html">¿Qué es La Tribu?</a>
-                <a href="contact.html">Contacto</a>
-            </div>
-            <div class="footer-social">
-                <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
-                <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-                <a href="#" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        <div class="footer-top">
+            <div class="footer-top-inner">
+                <!-- Brand -->
+                <div class="footer-brand">
+                    <img src="MAE%20LOGO%20PNG_x.png" alt="MAE Wellness Club" style="height: 63px; margin-bottom: 15px;"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span class="footer-logo-fallback" style="display:none;">MAE WELLNESS CLUB</span>
+                    <p class="footer-tagline">Transforma tu cuerpo.<br>Eleva tu mente.</p>
+                    <p class="footer-copy">&copy; 2026 MAE Wellness Club.</p>
+                </div>
+                <!-- Links -->
+                <div class="footer-col">
+                    <h4 class="footer-col-title">Disciplinas</h4>
+                    <a href="#discipline-cards">Pilates Reformer</a>
+                    <a href="#discipline-cards">Entrenamiento Funcional</a>
+                    <a href="#discipline-cards">Ciclismo Indoor</a>
+                    <a href="#schedule">Ver Horario</a>
+                </div>
+                <div class="footer-col">
+                    <h4 class="footer-col-title">Club</h4>
+                    <a href="tribe.html">¿Qué es La Tribu?</a>
+                    <a href="#pricing">Paquetes y Membresías</a>
+                    <a href="contact.html">Contacto</a>
+                    <a href="privacy.html">Privacidad</a>
+                    <a href="terms.html">Términos y Condiciones</a>
+                </div>
+                <!-- Contact -->
+                <div class="footer-col">
+                    <h4 class="footer-col-title">Contacto</h4>
+                    <p class="footer-contact-item"><i class="fa-solid fa-location-dot"></i> Chihuahua, Chih., México</p>
+                    <p class="footer-contact-item"><i class="fa-solid fa-phone"></i> <a href="tel:+526561234567">+52 656 123 4567</a></p>
+                    <p class="footer-contact-item"><i class="fa-solid fa-envelope"></i> <a href="mailto:hola@maewellnessclub.com.mx">hola@maewellnessclub.com.mx</a></p>
+                    <div class="footer-social">
+                        <a href="https://www.instagram.com/maewellnessclub" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="https://www.facebook.com/maewellnessclub" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="https://www.tiktok.com/@maewellnessclub" target="_blank" rel="noopener" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+                    </div>
+                </div>
             </div>
         </div>
     </footer>
+
+    <!-- Floating WhatsApp CTA -->
+    <a href="https://wa.me/526561234567?text=Hola%2C%20me%20interesa%20unirme%20a%20MAE%20Wellness%20Club%20%F0%9F%92%AA"
+       class="whatsapp-fab" target="_blank" rel="noopener" aria-label="Contáctanos por WhatsApp">
+        <i class="fa-brands fa-whatsapp"></i>
+        <span class="whatsapp-fab-tooltip">¿Preguntas? ¡Escríbenos!</span>
+    </a>
 
     <!-- Login Modal -->
     <div class="modal-overlay" id="loginModal">
