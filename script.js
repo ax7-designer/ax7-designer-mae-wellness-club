@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Success in signup
                         const user = signUpData.user || signUpData.session?.user;
                         if (user) {
-                            alert("¡Cuenta creada exitosamente! Bienvenido a La Tribu.");
+                            alert("¡Cuenta creada exitosamente! Bienvenido a Team Mae.");
                             closeModalFunc();
                             updateAuthUI(user);
                         } else {
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     alert(`Error al iniciar sesión: ${error.message}`);
                 }
             } else {
-                alert("¡Bienvenido de vuelta a La Tribu!");
+                alert("¡Bienvenido de vuelta a Team Mae!");
                 closeModalFunc();
                 updateAuthUI(data.user);
             }
