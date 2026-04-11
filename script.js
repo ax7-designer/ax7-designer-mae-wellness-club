@@ -35,8 +35,8 @@ let currentUser    = null;
 let selectedAvatar = 'bolt';
 let selectedDateISO = new Date().toISOString().split('T')[0];
 let selectedClassConfig = null;
-// inactiveDays: { weekdays: Set<number>, specific: Set<string> }
 let inactiveDays = { weekdays: new Set(), specific: new Set() };
+let isSignupMode = false;
 
 /* ============================================================
    HELPERS
@@ -68,6 +68,36 @@ function showToast(message, type = 'success') {
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 3000);
 }
 
+/** 
+ * Compresses an image file locally to save bandwidth
+ */
+async function compressImage(file, maxWidth = 300) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const scale  = maxWidth / img.width;
+                if (scale < 1) {
+                    canvas.width = maxWidth;
+                    canvas.height = img.height * scale;
+                } else {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                }
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob((blob) => {
+                    resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                }, 'image/jpeg', 0.85);
+            };
+        };
+    });
+}
+
 /* ============================================================
    MAIN INIT
    ============================================================ */
@@ -96,17 +126,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     /* -----------------------------------------------
        1. PROFILE MODAL
     ----------------------------------------------- */
-    function openProfileModal(user) {
+    async function openProfileModal(user) {
         if (!profileModal) return;
-        const meta     = user.user_metadata || {};
-        const nickname = meta.nickname || user.email.split('@')[0];
-        const avatar   = meta.avatar   || 'bolt';
-        if (nicknameInput)   nicknameInput.value = nickname;
+        
+        // Show/hide admin section
+        const adminCreditMgmt = document.getElementById('adminCreditMgmt');
+        if (adminCreditMgmt) adminCreditMgmt.style.display = isAdmin(user) ? 'block' : 'none';
+
+        // Fetch official profile from table
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        const nickname = profile?.nickname || user.user_metadata?.nickname || user.email.split('@')[0];
+        const avatar   = profile?.avatar   || user.user_metadata?.avatar   || 'bolt';
+        
+        if (document.getElementById('fullNameInput'))  document.getElementById('fullNameInput').value  = profile?.full_name || '';
+        if (document.getElementById('nicknameInput'))  document.getElementById('nicknameInput').value  = nickname;
+        if (document.getElementById('birthdayInput'))  document.getElementById('birthdayInput').value  = profile?.birthday  || '';
+        if (document.getElementById('phoneInput'))     document.getElementById('phoneInput').value     = profile?.phone     || '';
+        if (document.getElementById('emergencyContactInput')) document.getElementById('emergencyContactInput').value = profile?.emergency || '';
+        if (document.getElementById('profileCreditsCount'))  document.getElementById('profileCreditsCount').textContent = profile?.credits || '0';
+        
         if (profileGreeting) profileGreeting.textContent = `Hola, ${nickname}`;
         selectedAvatar = avatar;
         syncAvatarUI(avatar);
 
-        // Show/hide admin badge
         const adminBadge = document.getElementById('profileAdminBadge');
         if (adminBadge) adminBadge.style.display = isAdmin(user) ? 'flex' : 'none';
 
@@ -114,37 +156,68 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.style.overflow = 'hidden';
     }
 
-    function closeProfileModalFunc() {
-        if (!profileModal) return;
-        profileModal.classList.remove('active');
-        document.body.style.overflow = 'auto';
-    }
-
-    function syncAvatarUI(key) {
-        const iconClass = AVATAR_ICON_MAP[key] || 'fa-bolt';
-        if (profileAvatarDisp) profileAvatarDisp.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
-        avatarOptions.forEach(opt => opt.classList.toggle('selected', opt.dataset.avatar === key));
-    }
-
-    avatarOptions.forEach(opt => {
-        opt.addEventListener('click', () => { selectedAvatar = opt.dataset.avatar; syncAvatarUI(selectedAvatar); });
-    });
-
     if (saveProfileBtn) {
         saveProfileBtn.addEventListener('click', async () => {
-            const nickname = nicknameInput ? nicknameInput.value.trim() || 'Miembro' : 'Miembro';
+            const nickname = document.getElementById('nicknameInput')?.value.trim() || 'Miembro';
+            const fullName = document.getElementById('fullNameInput')?.value.trim() || '';
+            const birthday = document.getElementById('birthdayInput')?.value.trim() || '';
+            const phone    = document.getElementById('phoneInput')?.value.trim() || '';
+            const emergency= document.getElementById('emergencyContactInput')?.value.trim() || '';
+
             saveProfileBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Guardando...`;
             saveProfileBtn.disabled = true;
-            const { error } = await supabase.auth.updateUser({ data: { nickname, avatar: selectedAvatar } });
-            if (error) { showToast(`Error: ${error.message}`, 'error'); }
+
+            // Updated meta in Auth
+            await supabase.auth.updateUser({ data: { nickname, avatar: selectedAvatar, full_name: fullName } });
+            
+            // Upsert into Profiles table
+            const { error } = await supabase.from('profiles').upsert({
+                id: currentUser.id,
+                email_fallback: currentUser.email,
+                full_name: fullName,
+                nickname: nickname,
+                birthday: birthday,
+                phone: phone,
+                emergency: emergency,
+                avatar: selectedAvatar,
+                updated_at: new Date()
+            });
+
+            if (error) { showToast(`Error al guardar tabla: ${error.message}`, 'error'); }
             else {
-                const { data: { user } } = await supabase.auth.getUser();
-                updateAuthUI(user);
+                updateAuthUI(currentUser);
                 closeProfileModalFunc();
                 showToast('✓ Perfil actualizado');
             }
             saveProfileBtn.innerHTML = `<i class="fa-solid fa-check"></i> Guardar Perfil`;
             saveProfileBtn.disabled = false;
+        });
+    }
+
+    /* --- Admin: Manual Credit Assignment --- */
+    const adminAddCreditsBtn = document.getElementById('adminAddCreditsBtn');
+    if (adminAddCreditsBtn) {
+        adminAddCreditsBtn.addEventListener('click', async () => {
+            const email = document.getElementById('adminTargetEmail').value.trim();
+            const amount = parseInt(document.getElementById('adminCreditAmount').value);
+            if (!email || isNaN(amount)) return showToast('Email y cantidad requeridos', 'error');
+
+            adminAddCreditsBtn.disabled = true;
+            
+            // 1. Find user ID by email (This is usually blocked by RLS/Security unless we have a specific endpoint or logic)
+            // Simplified: We use a RPC or we assume the admin knows the ID? 
+            // Better: We match by email in a custom 'usage_ledger' or similar if possible.
+            // For now, if we don't have a 'search user' endpoint, let's use the provided email to filter public profiles.
+            const { data: targetProfile, error: searchError } = await supabase.from('profiles').select('id, credits').ilike('email_fallback', email).single();
+            // Note: I'll need to add email_fallback to the SQL later or use auth metadata search.
+            
+            // Codeforcing workaround: Update by email directly if the table has it
+            const { error } = await supabase.rpc('add_credits_by_email', { target_email: email, amount: amount });
+            
+            if (error) showToast(`Error: ${error.message}`, 'error');
+            else showToast(`✓ Se añadieron ${amount} clases a ${email}`);
+            
+            adminAddCreditsBtn.disabled = false;
         });
     }
 
@@ -228,6 +301,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     if (loginForm) {
+        const signupLink = document.getElementById('showSignupLink');
+        const forgotLink = document.getElementById('forgotPasswordLink');
+
+        if (signupLink) {
+            signupLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                isSignupMode = !isSignupMode;
+                logInBtnMsg.textContent = isSignupMode ? 'Crear Cuenta' : 'Iniciar Sesión';
+                signupLink.textContent = isSignupMode ? 'Ya tengo cuenta, ingresar' : 'Regístrate aquí';
+            });
+        }
+
+        if (forgotLink) {
+            forgotLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const email = emailInput.value;
+                if (!email) return showToast('Ingresa tu email primero', 'error');
+                const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+                if (error) showToast(`Error: ${error.message}`, 'error');
+                else showToast('✓ Correo de recuperación enviado', 'info');
+            });
+        }
+
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = emailInput.value, password = passInput.value;
@@ -235,19 +331,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             logInBtnMsg.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Cargando...`;
             logInBtnMsg.disabled = true;
 
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                if (error.message.includes('Invalid login credentials') || error.status === 400) {
-                    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
-                    if (signUpError) { showToast(`Error: ${signUpError.message}`, 'error'); }
-                    else {
-                        const user = signUpData.user || signUpData.session?.user;
-                        if (user) { closeModalFunc(); updateAuthUI(user); }
-                        else { showToast('Revisa tu correo para confirmar tu cuenta.', 'info'); }
-                    }
-                } else { showToast(`Error: ${error.message}`, 'error'); }
+            if (isSignupMode) {
+                const { data, error } = await supabase.auth.signUp({ email, password });
+                if (error) showToast(`Error: ${error.message}`, 'error');
+                else {
+                    if (data.session) { closeModalFunc(); updateAuthUI(data.user); }
+                    else showToast('✓ Revisa tu correo de confirmación', 'info');
+                }
             } else {
-                closeModalFunc(); updateAuthUI(data.user);
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) showToast(`Error de acceso: ${error.message}`, 'error');
+                else { closeModalFunc(); updateAuthUI(data.user); }
             }
             logInBtnMsg.innerHTML = originalText;
             logInBtnMsg.disabled = false;
@@ -444,11 +538,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /* -----------------------------------------------
-       10. ADMIN CLASS MODAL — with preview
+       10. ADMIN CLASS MODAL — with photo upload
     ----------------------------------------------- */
     const recurrencePreview = document.getElementById('recurrencePreview');
     const recurrenceFreqEl  = document.getElementById('adminRecurrenceFreq');
     const recurrenceCountEl = document.getElementById('adminRecurrenceCount');
+    const coachFileInput    = document.getElementById('adminCoachFile');
+    const coachImgPreview   = document.getElementById('coachImgPreview');
+
+    if (coachFileInput) {
+        coachFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            coachImgPreview.style.display = 'block';
+            const previewImg = coachImgPreview.querySelector('img');
+            previewImg.src = URL.createObjectURL(file);
+            previewImg.style.opacity = '0.5';
+
+            try {
+                const compressed = await compressImage(file, 200);
+                const fileName   = `coach_${Date.now()}.jpg`;
+                const { data, error } = await supabase.storage.from('coaches').upload(fileName, compressed);
+                
+                if (error) throw error;
+                
+                const { data: { publicUrl } } = supabase.storage.from('coaches').getPublicUrl(fileName);
+                document.getElementById('adminCoachImg').value = publicUrl;
+                previewImg.src = publicUrl;
+                previewImg.style.opacity = '1';
+                showToast('✓ Imagen optimizada y lista');
+            } catch (err) {
+                showToast(`Error al subir imagen: ${err.message}`, 'error');
+                previewImg.style.opacity = '1';
+            }
+        });
+    }
 
     function updateRecurrencePreview() {
         if (!recurrencePreview) return;
@@ -518,6 +643,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const recurrenceFreq = recurrenceFreqEl?.value || 'none';
             const recurrenceCount= parseInt(recurrenceCountEl?.value) || 1;
 
+            if (!coachImg) return showToast('Espera a que suba la imagen...', 'error');
+
             const saveBtn = document.getElementById('saveClassBtn');
             const originalBtnText = saveBtn.innerHTML;
             saveBtn.disabled = true;
@@ -545,6 +672,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 adminClassModal.classList.remove('active');
                 adminClassForm.reset();
+                coachImgPreview.style.display = 'none';
                 if (recurrencePreview) recurrencePreview.innerHTML = '';
                 renderDailyClasses();
                 showToast(`✓ ${classesToInsert.length} clase${classesToInsert.length > 1 ? 's' : ''} programada${classesToInsert.length > 1 ? 's' : ''}`);
@@ -596,8 +724,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="daily-class-meta">
                     <span class="spots-badge">${freeCount} lugares libres</span>
-                    <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:0.8rem;"></i>
+                    ${isAdmin(currentUser) ? '<button class="delete-class-btn" style="background:none; border:none; color:#e63946; cursor:pointer; padding:5px; margin-left:10px;"><i class="fa-solid fa-trash-can"></i></button>' : ''}
+                    <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:0.8rem; margin-left:10px;"></i>
                 </div>`;
+            
+            // Delete listener
+            const delBtn = card.querySelector('.delete-class-btn');
+            if (delBtn) {
+                delBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`¿Estás seguro de eliminar la clase de ${cls.discipline} con ${cls.coach_name}?`)) {
+                        const { error } = await supabase.from('classes').delete().eq('id', cls.id);
+                        if (error) showToast(`Error al eliminar: ${error.message}`, 'error');
+                        else { showToast('✓ Clase eliminada'); renderDailyClasses(); }
+                    }
+                });
+            }
+
             card.addEventListener('click', () => {
                 document.querySelectorAll('.daily-class-card').forEach(c => c.classList.remove('active'));
                 card.classList.add('active');
@@ -648,12 +791,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             confirmReserveBtn.disabled = true;
             confirmReserveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-            // occupied_spots stores objects: { spot, userId, displayName }
-            const currentOccupied = (pendingCls.occupied_spots || []);
-            // Migrate legacy int format
-            const normalized = currentOccupied.map(s => typeof s === 'number' ? { spot: s, userId: null, displayName: 'Miembro' } : s);
+            // 0. CHECK CREDITS (Option A)
+            const { data: profile } = await supabase.from('profiles').select('credits').eq('id', currentUser.id).single();
+            if (!profile || profile.credits <= 0) {
+                showToast('No tienes clases disponibles. Por favor adquiere un plan.', 'error');
+                reserveModal.classList.remove('active');
+                confirmReserveBtn.disabled = false;
+                confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
+                return;
+            }
 
-            // Check user doesn't already have a spot in this class
+            // 1. UPDATE CLASS SPOTS (Legacy logic but with credit check)
+            const currentOccupied = (pendingCls.occupied_spots || []);
+            const normalized = currentOccupied.map(s => typeof s === 'number' ? { spot: s, userId: null, displayName: 'Miembro' } : s);
+            
             const alreadyBooked = normalized.some(s => s.userId === currentUser.id);
             if (alreadyBooked) {
                 showToast('Ya tienes un lugar reservado en esta clase.', 'error');
@@ -666,27 +817,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const newEntry   = { spot: pendingSpot, userId: currentUser.id, displayName };
             const newOccupied = [...normalized, newEntry];
 
-            const { data, error } = await supabase
-                .from('classes')
-                .update({ occupied_spots: newOccupied })
-                .eq('id', pendingCls.id)
-                .select();
+            const { data, error } = await supabase.from('classes').update({ occupied_spots: newOccupied }).eq('id', pendingCls.id).select();
 
             if (error) {
-                showToast(`Error en la reserva: ${error.message}`, 'error');
-                renderSpotsGrid(pendingCls);
+                showToast(`Error: ${error.message}`, 'error');
             } else {
-                showToast(`✓ ¡Lugar ${pendingSpot} reservado como "${displayName}"!`);
-                const updatedCls = data[0];
-                renderSpotsGrid(updatedCls);
+                // 2. DEDUCT CREDIT
+                await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', currentUser.id);
+                showToast(`✓ ¡Reserva lista! Slot #${pendingSpot}`);
+                renderSpotsGrid(data[0]);
                 renderDailyClasses();
             }
 
             reserveModal.classList.remove('active');
             confirmReserveBtn.disabled = false;
             confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
-            pendingSpot = null;
-            pendingCls  = null;
+            pendingSpot = null; pendingCls  = null;
         });
     }
 

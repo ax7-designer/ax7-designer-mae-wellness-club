@@ -2332,3 +2332,57 @@ button {
     #reserveModal .modal-content,
     #inactiveDayModal .modal-content { max-width: 100% !important; }
 }
+
+/* ==========================================
+   PROFILES & CREDITS UI
+   ========================================== */
+#profileBalanceBox {
+    transition: transform var(--transition-med);
+}
+#profileBalanceBox:hover {
+    transform: translateY(-3px);
+    border-color: #2a9d8f;
+    box-shadow: 0 10px 30px rgba(42,157,143,0.1);
+}
+.input-group input[type="text"],
+.input-group input[type="tel"],
+.input-group input[type="email"],
+.input-group input[type="number"] {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    color: #fff !important;
+    font-family: inherit;
+    transition: all var(--transition-fast);
+}
+.input-group input:focus {
+    border-color: var(--accent-gold) !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    outline: none;
+}
+
+/* ==========================================
+   ADMIN DELETE ICON
+   ========================================== */
+.delete-class-btn {
+    opacity: 0.6;
+    transition: all var(--transition-fast);
+}
+.delete-class-btn:hover {
+    opacity: 1;
+    transform: scale(1.15);
+    color: #ff4d4d;
+}
+
+/* ==========================================
+   LOGO SIZE ADJUSTMENT (30% Larger)
+   ========================================== */
+.logo img {
+    height: 125px !important;
+}
+
+@media (max-width: 768px) {
+    .logo img { height: 100px !important; }
+}
