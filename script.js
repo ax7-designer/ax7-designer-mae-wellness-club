@@ -149,7 +149,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const adminEmails = [
                     'jesuscomtreras.666@gmail.com',
                     'guemesana12@gmail.com',
-                    'admin@maewellnessclub.com.mx',
                     'alexis.septem@gmail.com'
                 ];
                 if (adminEmails.includes(user.email)) {
@@ -207,7 +206,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     supabase.auth.onAuthStateChange((event, session) => {
         if (session) {
             updateAuthUI(session.user);
-            if (event === 'SIGNED_IN') closeModalFunc();
+
+            // Clean OAuth tokens from URL hash
+            if (window.location.hash.includes('access_token')) {
+                window.history.replaceState(null, null, window.location.pathname + window.location.search);
+            }
+
+            if (event === 'SIGNED_IN') {
+                const adminEmails = ['jesuscomtreras.666@gmail.com', 'guemesana12@gmail.com', 'alexis.septem@gmail.com'];
+                if (adminEmails.includes(session.user.email)) {
+                    alert("¡Modo Admin Activado!");
+                }
+                closeModalFunc();
+            }
         } else {
             updateAuthUI(null);
         }
@@ -250,7 +261,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     alert(`Error al iniciar sesión: ${error.message}`);
                 }
             } else {
-                alert("¡Bienvenido de vuelta a Team Mae!");
+                // Alert moved to onAuthStateChange for all login types
                 closeModalFunc();
                 updateAuthUI(data.user);
             }
@@ -460,26 +471,63 @@ document.addEventListener('DOMContentLoaded', async () => {
             const coachImg = document.getElementById('adminCoachImg').value;
             const note = document.getElementById('adminClassNote').value;
             
+            const recurrenceFreq = document.getElementById('adminRecurrenceFreq').value;
+            const recurrenceCount = parseInt(document.getElementById('adminRecurrenceCount').value) || 1;
+
+            const saveBtn = document.getElementById('saveClassBtn');
+            const originalBtnText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+
+            const classesToInsert = [];
+            const baseDate = new Date(selectedDateISO + 'T12:00:00'); // Use mid-day to avoid timezone shifts
+
+            // 1. Initial Class
+            const baseClass = {
+                date: selectedDateISO,
+                discipline: discipline,
+                coach_name: coachName,
+                coach_img: coachImg,
+                note: note,
+                capacity: DISCIPLINE_CAPACITY[discipline],
+                occupied_spots: [] 
+            };
+            classesToInsert.push(baseClass);
+
+            // 2. Recurrent Classes
+            if (recurrenceFreq !== 'none' && recurrenceCount > 1) {
+                for (let i = 1; i < recurrenceCount; i++) {
+                    const nextDate = new Date(baseDate);
+                    if (recurrenceFreq === 'daily') {
+                        nextDate.setDate(baseDate.getDate() + i);
+                    } else if (recurrenceFreq === 'weekly') {
+                        nextDate.setDate(baseDate.getDate() + (i * 7));
+                    }
+                    
+                    const nextISO = getISOFromDate(nextDate);
+                    classesToInsert.push({
+                        ...baseClass,
+                        date: nextISO
+                    });
+                }
+            }
+            
             const { error } = await supabase
                 .from('classes')
-                .insert([{
-                    date: selectedDateISO,
-                    discipline: discipline,
-                    coach_name: coachName,
-                    coach_img: coachImg,
-                    note: note,
-                    capacity: DISCIPLINE_CAPACITY[discipline],
-                    occupied_spots: [] 
-                }]);
+                .insert(classesToInsert);
             
             if (error) {
-                alert(`Error al crear clase: ${error.message}`);
+                alert(`Error al crear clase(s): ${error.message}`);
             } else {
                 adminClassModal.classList.remove('active');
                 adminClassForm.reset();
                 renderDailyClasses();
-                alert('¡Clase programada exitosamente en Superbase!');
+                const countMsg = classesToInsert.length > 1 ? ` (${classesToInsert.length} clases)` : '';
+                alert(`¡Programación exitosa${countMsg}!`);
             }
+
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnText;
         });
     }
 

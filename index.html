@@ -391,6 +391,7 @@
                     <a href="contact.html">Contacto</a>
                     <a href="privacy.html">Privacidad</a>
                     <a href="terms.html">Términos y Condiciones</a>
+                    <a href="deletion.html">Eliminación de Datos</a>
                 </div>
                 <!-- Contact -->
                 <div class="footer-col">
@@ -536,6 +537,25 @@
                 <div class="input-group">
                     <label for="adminClassNote">Nota / Mensaje para alumnos (Opcional)</label>
                     <textarea id="adminClassNote" placeholder="Ej: Traer toalla, lleguen 5 min antes..." style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.5); color: #fff; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
+                </div>
+
+                <div class="recurrence-section" style="margin-top: 20px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px dashed rgba(201, 169, 110, 0.3);">
+                    <h4 style="color: var(--accent-gold); margin-bottom: 15px; font-size: 0.9rem; letter-spacing: 1px; text-transform: uppercase;"><i class="fa-solid fa-repeat"></i> Duplicación de Clase</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label for="adminRecurrenceFreq">Frecuencia</label>
+                            <select id="adminRecurrenceFreq" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.5); color: #fff; font-family: inherit;">
+                                <option value="none">Una sola vez</option>
+                                <option value="daily">Diaria</option>
+                                <option value="weekly">Semanal</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label for="adminRecurrenceCount">Repeticiones</label>
+                            <input type="number" id="adminRecurrenceCount" min="2" max="30" value="2" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.5); color: #fff; font-family: inherit;">
+                        </div>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px; font-style: italic;">Se crearán copias idénticas para los días siguientes según la frecuencia elegida.</p>
                 </div>
                 <button type="submit" class="btn-primary" id="saveClassBtn">Añadir al Calendario</button>
             </form>
