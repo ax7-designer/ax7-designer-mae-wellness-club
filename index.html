@@ -320,11 +320,13 @@
             </div>
             
             <div class="class-view" id="classViewContainer">
-                <!-- Day details and Admin controls -->
-                <div class="day-header-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <!-- Day header -->
+                <div class="day-header-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                     <h3 id="selectedDateDisplay" style="margin: 0;">Clases de Hoy</h3>
-                    <!-- Solo visible si es admin -->
-                    <button id="addAdminClassBtn" class="btn-primary" style="display: none; padding: 8px 16px; font-size: 0.85rem;"><i class="fa-solid fa-plus"></i> Añadir Clase</button>
+                    <div style="display:flex;gap:10px;">
+                        <button id="addInactiveDayBtn" class="btn-secondary-small" style="display: none;"><i class="fa-solid fa-moon"></i> Día Inactivo</button>
+                        <button id="addAdminClassBtn" class="btn-primary" style="display: none; padding: 8px 16px; font-size: 0.85rem;"><i class="fa-solid fa-plus"></i> Añadir Clase</button>
+                    </div>
                 </div>
 
                 <!-- Classes List for the Day -->
@@ -348,9 +350,9 @@
                 </div>
 
                 <div class="legend">
-                    <div class="legend-item"><span class="dot free"></span> Libre (Comprar / Reservar)</div>
-                    <div class="legend-item"><span class="dot member"></span> Miembro</div>
-                    <div class="legend-item"><span class="dot anon"></span> Anónimo</div>
+                    <div class="legend-item"><span class="dot free"></span> Libre</div>
+                    <div class="legend-item"><span class="dot member"></span> Ocupado</div>
+                    <div class="legend-item"><span class="dot mine"></span> Tu lugar</div>
                 </div>
             </div>
         </div>
@@ -527,6 +529,11 @@
                 <div class="profile-avatar-display" id="profileAvatarDisplay">
                     <i class="fa-solid fa-bolt"></i>
                 </div>
+                <!-- Admin badge inside profile modal -->
+                <div id="profileAdminBadge" style="display:none; align-items:center; gap:6px; background: rgba(201,169,110,0.15); border: 1px solid var(--accent-gold); border-radius:20px; padding: 4px 14px; margin: 8px auto; width:fit-content;">
+                    <i class="fa-solid fa-shield-halved" style="color:var(--accent-gold);"></i>
+                    <span style="color:var(--accent-gold); font-size:0.8rem; font-weight:700; letter-spacing:2px;">MODO ADMIN</span>
+                </div>
                 <h2 id="profileGreeting">Mi Perfil</h2>
                 <p>Personaliza tu identidad en Team Mae</p>
             </div>
@@ -598,12 +605,13 @@
                     <textarea id="adminClassNote" placeholder="Ej: Traer toalla, lleguen 5 min antes..." style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.5); color: #fff; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
                 </div>
 
-                <div class="recurrence-section" style="margin-top: 20px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px dashed rgba(201, 169, 110, 0.3);">
+                <!-- Recurrence section -->
+                <div class="recurrence-section" style="margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px dashed rgba(201,169,110,0.3);">
                     <h4 style="color: var(--accent-gold); margin-bottom: 15px; font-size: 0.9rem; letter-spacing: 1px; text-transform: uppercase;"><i class="fa-solid fa-repeat"></i> Duplicación de Clase</h4>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div class="input-group" style="margin-bottom: 0;">
                             <label for="adminRecurrenceFreq">Frecuencia</label>
-                            <select id="adminRecurrenceFreq" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.5); color: #fff; font-family: inherit;">
+                            <select id="adminRecurrenceFreq" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.5);color:#fff;font-family:inherit;">
                                 <option value="none">Una sola vez</option>
                                 <option value="daily">Diaria</option>
                                 <option value="weekly">Semanal</option>
@@ -611,13 +619,77 @@
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
                             <label for="adminRecurrenceCount">Repeticiones</label>
-                            <input type="number" id="adminRecurrenceCount" min="2" max="30" value="2" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.5); color: #fff; font-family: inherit;">
+                            <input type="number" id="adminRecurrenceCount" min="2" max="30" value="2" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.5);color:#fff;font-family:inherit;">
                         </div>
                     </div>
-                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px; font-style: italic;">Se crearán copias idénticas para los días siguientes según la frecuencia elegida.</p>
+                    <!-- Preview of dates to be created -->
+                    <div id="recurrencePreview" style="margin-top:14px;"></div>
                 </div>
-                <button type="submit" class="btn-primary" id="saveClassBtn">Añadir al Calendario</button>
+                <button type="submit" class="btn-primary" id="saveClassBtn" style="margin-top:20px;width:100%;padding:16px;">Añadir al Calendario</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Inactive Day Modal -->
+    <div class="modal-overlay" id="inactiveDayModal">
+        <div class="modal-content" style="max-width:480px;">
+            <button class="close-btn" id="closeInactiveDayModal" aria-label="Cerrar">&times;</button>
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-moon" style="color:var(--accent-gold);"></i> Día Inactivo</h2>
+                <p>Bloquea un día para que no se puedan hacer reservas.</p>
+            </div>
+            <form id="inactiveDayForm" style="display:flex;flex-direction:column;gap:16px;margin-top:20px;">
+                <div class="input-group">
+                    <label for="inactiveType">Tipo de bloqueo</label>
+                    <select id="inactiveType" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.5);color:#fff;font-family:inherit;">
+                        <option value="weekday">Todos los [día de la semana] (recurrente)</option>
+                        <option value="specific">Una fecha específica</option>
+                    </select>
+                </div>
+                <div id="weekdayGroup" class="input-group">
+                    <label for="inactiveWeekday">Día de la semana</label>
+                    <select id="inactiveWeekday" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.5);color:#fff;font-family:inherit;">
+                        <option value="0">Domingo</option>
+                        <option value="1">Lunes</option>
+                        <option value="2">Martes</option>
+                        <option value="3">Miércoles</option>
+                        <option value="4">Jueves</option>
+                        <option value="5">Viernes</option>
+                        <option value="6">Sábado</option>
+                    </select>
+                </div>
+                <div id="specificGroup" class="input-group" style="display:none;">
+                    <label for="inactiveDate">Fecha específica</label>
+                    <input type="date" id="inactiveDate" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.5);color:#fff;font-family:inherit;">
+                </div>
+                <button type="submit" class="btn-primary" style="padding:14px;"><i class="fa-solid fa-ban"></i> Confirmar Bloqueo</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reservation Confirmation Modal -->
+    <div class="modal-overlay" id="reserveModal">
+        <div class="modal-content" style="max-width:420px;">
+            <button class="close-btn" id="closeReserveModal" aria-label="Cerrar">&times;</button>
+            <div class="modal-header">
+                <i class="fa-solid fa-chair" style="font-size:2.5rem;color:var(--accent-gold);margin-bottom:10px;"></i>
+                <h2>Confirmar Reserva</h2>
+                <p id="reserveClassLabel" style="color:var(--text-muted);">Clase · Coach</p>
+            </div>
+            <div style="margin-top:24px;">
+                <div style="background:rgba(201,169,110,0.08);border:1px solid rgba(201,169,110,0.25);border-radius:10px;padding:16px;margin-bottom:20px;text-align:center;">
+                    <span style="font-size:0.8rem;color:var(--text-muted);">RESERVANDO</span>
+                    <div id="reserveSpotLabel" style="font-size:2rem;font-weight:800;color:var(--accent-gold);">Lugar #?</div>
+                </div>
+                <div class="input-group">
+                    <label for="reserveDisplayName">¿Cómo aparecerás?</label>
+                    <select id="reserveDisplayName" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.5);color:#fff;font-family:inherit;"></select>
+                </div>
+                <p style="font-size:0.75rem;color:var(--text-muted);margin:12px 0;font-style:italic;">Tu reserva está sujeta a que cuentes con clases disponibles en tu plan. El equipo de Mae confirmará tu saldo.</p>
+                <button id="confirmReserveBtn" class="btn-primary" style="width:100%;padding:16px;">
+                    <i class="fa-solid fa-check"></i> Confirmar Reserva
+                </button>
+            </div>
         </div>
     </div>
 

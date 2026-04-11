@@ -2189,18 +2189,146 @@ button {
 /* ==========================================
    ADMIN RECURRENCE SECTION
    ========================================== */
-.recurrence-section {
-    transition: all var(--transition-med);
-}
-
+.recurrence-section { transition: all var(--transition-med); }
 .recurrence-section select:focus,
 .recurrence-section input:focus {
     border-color: var(--accent-gold);
     box-shadow: 0 0 10px rgba(201, 169, 110, 0.2);
     outline: none;
 }
-
 #adminRecurrenceFreq, #adminRecurrenceCount {
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+/* ==========================================
+   MODAL — RESPONSIVE FIX
+   ========================================== */
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-gold) transparent;
+}
+.modal-content .close-btn {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    align-self: flex-end;
+    margin-bottom: -10px;
+    background: rgba(20,18,16,0.95);
+    border-radius: 50%;
+}
+.modal-content::-webkit-scrollbar { width: 4px; }
+.modal-content::-webkit-scrollbar-thumb { background: var(--accent-gold); border-radius: 2px; }
+
+/* ==========================================
+   ADMIN BADGE — NAVBAR
+   ========================================== */
+.admin-badge-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(201,169,110,0.18);
+    border: 1px solid rgba(201,169,110,0.4);
+    color: var(--accent-gold);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+/* ==========================================
+   INACTIVE DATE PILLS
+   ========================================== */
+.date-pill.inactive {
+    opacity: 0.38;
+    cursor: not-allowed;
+    background: rgba(255,255,255,0.03) !important;
+    border-color: rgba(255,255,255,0.08) !important;
+    pointer-events: none;
+    position: relative;
+}
+.date-pill.inactive .inactive-icon {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    font-size: 0.55rem;
+    color: var(--text-muted);
+}
+
+/* ==========================================
+   MINE SPOT
+   ========================================== */
+.spot.mine {
+    background: linear-gradient(135deg, rgba(42,157,143,0.25), rgba(42,157,143,0.1));
+    border-color: #2a9d8f;
+    cursor: default;
+}
+.spot.mine .status { color: #2a9d8f; font-size: 0.65rem; }
+.spot.mine .mine-tag {
+    font-size: 0.55rem;
+    font-weight: 800;
+    color: #2a9d8f;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.dot.mine { background: #2a9d8f; box-shadow: 0 0 6px rgba(42,157,143,0.5); }
+
+/* ==========================================
+   RECURRENCE PREVIEW TAGS
+   ========================================== */
+.preview-dates-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.preview-date-tag {
+    background: rgba(201,169,110,0.1);
+    border: 1px solid rgba(201,169,110,0.3);
+    color: var(--accent-gold);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+/* ==========================================
+   SECONDARY SMALL BUTTON
+   ========================================== */
+.btn-secondary-small {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.btn-secondary-small:hover {
+    color: var(--accent-gold);
+    border-color: rgba(201,169,110,0.4);
+    background: rgba(201,169,110,0.06);
+}
+
+/* ==========================================
+   MOBILE MODAL & PERFORMANCE FIX
+   ========================================== */
+@media (max-width: 768px) {
+    .hero-bg { background-attachment: scroll !important; }
+    .modal-content {
+        max-height: 92dvh;
+        border-radius: 16px 16px 0 0;
+        margin-top: auto;
+    }
+    .modal-overlay { align-items: flex-end; }
+    #reserveModal .modal-content,
+    #inactiveDayModal .modal-content { max-width: 100% !important; }
+}
