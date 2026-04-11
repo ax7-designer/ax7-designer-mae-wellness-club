@@ -126,6 +126,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     /* -----------------------------------------------
        1. PROFILE MODAL
     ----------------------------------------------- */
+/**
+ * Ensures the user has a profile record with email_fallback for admin search
+ */
+async function syncProfile(user) {
+    if (!user) return;
+    const { data } = await supabase.from('profiles').select('id').eq('id', user.id).single();
+    if (!data) {
+        await supabase.from('profiles').insert({
+            id: user.id,
+            email_fallback: user.email,
+            nickname: user.user_metadata?.nickname || user.email.split('@')[0],
+            avatar: user.user_metadata?.avatar || 'bolt',
+            credits: 0
+        });
+    } else {
+        // Ensure email_fallback is set if it was missing
+        await supabase.from('profiles').update({ email_fallback: user.email }).eq('id', user.id);
+    }
+}
+
     async function openProfileModal(user) {
         if (!profileModal) return;
         
@@ -293,6 +313,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (event === 'SIGNED_IN') {
                 showToast(isAdmin(session.user) ? '🛡️ Modo Admin activado' : '¡Bienvenido/a a Team Mae!', 'info');
+                syncProfile(session.user);
                 closeModalFunc();
             }
         } else {
