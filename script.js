@@ -149,6 +149,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    if (btnGoogle) {
+        btnGoogle.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+            if (error) showToast(`Error Google: ${error.message}`, 'error');
+        });
+    }
+
+    if (btnFacebook) {
+        btnFacebook.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signInWithOAuth({ provider: 'facebook' });
+            if (error) showToast(`Error Facebook: ${error.message}`, 'error');
+        });
+    }
+
     if (closeModal) closeModal.addEventListener('click', closeModalFunc);
     if (loginModal) loginModal.addEventListener('click', (e) => { if (e.target === loginModal) closeModalFunc(); });
     
@@ -321,16 +335,18 @@ async function syncProfile(user) {
     /* -----------------------------------------------
        2. AUTH UI UPDATER
     ----------------------------------------------- */
-    function updateAuthUI(user) {
+    async function updateAuthUI(user) {
         currentUser = user;
         if (!loginBtn) return;
         const addAdminClassBtn = document.getElementById('addAdminClassBtn');
         const addInactiveDayBtn = document.getElementById('addInactiveDayBtn');
 
         if (user) {
-            const meta      = user.user_metadata || {};
-            const nickname  = meta.nickname || user.email.split('@')[0];
-            const avatar    = meta.avatar   || 'bolt';
+            // Priority: Table profile > Meta > Derived from email
+            const { data: profile } = await supabase.from('profiles').select('nickname, avatar').eq('id', user.id).single();
+            const nickname  = profile?.nickname || user.user_metadata?.nickname || user.email.split('@')[0];
+            const avatar    = profile?.avatar   || user.user_metadata?.avatar   || 'bolt';
+            
             const iconClass = AVATAR_ICON_MAP[avatar] || 'fa-bolt';
             const adminTag  = isAdmin(user)
                 ? `<span class="admin-badge-nav"><i class="fa-solid fa-shield-halved"></i> Admin</span>`
@@ -374,10 +390,43 @@ async function syncProfile(user) {
                 syncProfile(session.user);
                 closeModalFunc();
             }
+            if (event === 'PASSWORD_RECOVERY') {
+                const resetModal = document.getElementById('resetPasswordModal');
+                if (resetModal) {
+                    resetModal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
         } else {
             updateAuthUI(null);
         }
     });
+
+    const resetPasswordForm = document.getElementById('resetPasswordForm');
+    if (resetPasswordForm) {
+        resetPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPass = document.getElementById('newPassword').value;
+            const confPass = document.getElementById('confirmNewPassword').value;
+
+            if (newPass !== confPass) return showToast('Las contraseñas no coinciden', 'error');
+
+            const submitBtn = resetPasswordForm.querySelector('button');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Actualizando...';
+
+            const { error } = await supabase.auth.updateUser({ password: newPass });
+            if (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            } else {
+                showToast('✓ Contraseña actualizada correctamente');
+                document.getElementById('resetPasswordModal').classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-lock-open"></i> Actualizar Contraseña';
+        });
+    }
 
     if (loginForm) {
         const signupLink = document.getElementById('showSignupLink');

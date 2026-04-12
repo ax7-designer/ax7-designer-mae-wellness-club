@@ -2396,3 +2396,70 @@ button {
 @media (max-width: 768px) {
     .logo img { height: 100px !important; }
 }
+
+/* ==========================================
+   AUTH & SOCIAL LOGIN
+   ========================================== */
+.social-login-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 24px 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+.social-login-divider::before, .social-login-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.social-login-divider:not(:empty)::before { margin-right: 15px; }
+.social-login-divider:not(:empty)::after { margin-left: 15px; }
+
+.social-login-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.social-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+.social-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(201, 169, 110, 0.4);
+    transform: translateY(-2px);
+}
+.btn-facebook i { color: #1877F2; font-size: 1rem; }
+
+.admin-badge-nav {
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid var(--accent-gold);
+    color: var(--accent-gold);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    margin-left: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+@media (max-width: 480px) {
+    .social-login-group { grid-template-columns: 1fr; }
+}
