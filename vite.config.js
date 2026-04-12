@@ -10,6 +10,7 @@ export default defineConfig({
         contact: resolve(__dirname, 'contact.html'),
         terms: resolve(__dirname, 'terms.html'),
         privacy: resolve(__dirname, 'privacy.html'),
+        deletion: resolve(__dirname, 'deletion.html'),
       },
     },
   },
