@@ -122,9 +122,74 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnGoogle          = document.getElementById('btnGoogle');
     const btnFacebook        = document.getElementById('btnFacebook');
     const navbar             = document.getElementById('navbar');
+    const mobileMenu         = document.getElementById('mobileMenu');
+    const dateScrollContainer = document.getElementById('dateScrollContainer');
+    const spotsGrid           = document.getElementById('spotsGrid');
+    const dailyClassesList    = document.getElementById('dailyClassesList');
+    const selectedDateDisplay = document.getElementById('selectedDateDisplay');
+    const addAdminClassBtn    = document.getElementById('addAdminClassBtn');
+    const addInactiveDayBtn   = document.getElementById('addInactiveDayBtn');
+    const adminClassModal     = document.getElementById('adminClassModal');
+    const closeAdminClassModal= document.getElementById('closeAdminClassModal');
+    const adminClassForm      = document.getElementById('adminClassForm');
+    const selectedClassProfile= document.getElementById('selectedClassProfile');
+    const scCoachImg          = document.getElementById('scCoachImg');
+    const scCoachName         = document.getElementById('scCoachName');
+    const scCoachDiscipline   = document.getElementById('scCoachDiscipline');
+    const scCoachNote         = document.getElementById('scCoachNote');
 
     /* -----------------------------------------------
-       1. PROFILE MODAL
+       0. ATTACH LISTENERS IMMEDIATELY
+    ----------------------------------------------- */
+    // Attaching listeners early ensures UI is interactive even if data fetch is slow
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            if (currentUser) openProfileModal(currentUser);
+            else openModal();
+        });
+    }
+
+    if (closeModal) closeModal.addEventListener('click', closeModalFunc);
+    if (loginModal) loginModal.addEventListener('click', (e) => { if (e.target === loginModal) closeModalFunc(); });
+    
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMobileMenu);
+    
+    const mobileClose = document.getElementById('mobileMenuClose');
+    if (mobileClose) mobileClose.addEventListener('click', closeMobileMenu);
+    
+    if (mobileMenu) {
+        mobileMenu.addEventListener('click', (e) => { 
+            const panel = mobileMenu.querySelector('.mobile-menu-panel'); 
+            if (panel && !panel.contains(e.target)) closeMobileMenu(); 
+        });
+    }
+
+    const mobileLinks = document.querySelectorAll('.mobile-nav-link');
+    mobileLinks.forEach(link => link.addEventListener('click', closeMobileMenu));
+
+    document.addEventListener('keydown', (e) => { 
+        if (e.key === 'Escape') { closeModalFunc(); closeProfileModalFunc(); } 
+    });
+
+    /* -----------------------------------------------
+       1. SCROLL REVEAL (IntersectionObserver)
+    ----------------------------------------------- */
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                revealObserver.unobserve(entry.target); // Reveal only once
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.scroll-reveal').forEach(el => revealObserver.observe(el));
+
+
+
+    /* -----------------------------------------------
+       3. PROFILE MODAL
     ----------------------------------------------- */
 /**
  * Ensures the user has a profile record with email_fallback for admin search
@@ -256,7 +321,7 @@ async function syncProfile(user) {
     /* -----------------------------------------------
        2. AUTH UI UPDATER
     ----------------------------------------------- */
-    const updateAuthUI = (user) => {
+    function updateAuthUI(user) {
         currentUser = user;
         if (!loginBtn) return;
         const addAdminClassBtn = document.getElementById('addAdminClassBtn');
@@ -279,17 +344,9 @@ async function syncProfile(user) {
             if (addAdminClassBtn)  addAdminClassBtn.style.display  = 'none';
             if (addInactiveDayBtn) addInactiveDayBtn.style.display = 'none';
         }
-    };
-
-    if (loginBtn) {
-        loginBtn.addEventListener('click', () => {
-            if (currentUser) openProfileModal(currentUser);
-            else openModal();
-        });
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    updateAuthUI(session?.user || null);
+
 
     /* -----------------------------------------------
        3. LOGIN MODAL
@@ -300,10 +357,11 @@ async function syncProfile(user) {
     function closeModalFunc() {
         if (loginModal) { loginModal.classList.remove('active'); document.body.style.overflow = 'auto'; }
     }
+    function closeProfileModalFunc() {
+        if (profileModal) { profileModal.classList.remove('active'); document.body.style.overflow = 'auto'; }
+    }
 
-    if (closeModal) closeModal.addEventListener('click', closeModalFunc);
-    if (loginModal) loginModal.addEventListener('click', (e) => { if (e.target === loginModal) closeModalFunc(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModalFunc(); closeProfileModalFunc(); } });
+
 
     supabase.auth.onAuthStateChange((event, session) => {
         if (session) {
@@ -387,18 +445,13 @@ async function syncProfile(user) {
     ----------------------------------------------- */
     if (navbar) {
         const handleNavScroll = () => navbar.classList.toggle('scrolled', window.scrollY > 60);
-        window.addEventListener('scroll', handleNavScroll);
+        window.addEventListener('scroll', handleNavScroll, { passive: true });
         handleNavScroll();
     }
 
     /* -----------------------------------------------
        5. MOBILE MENU
     ----------------------------------------------- */
-    const hamburgerBtn = document.getElementById('hamburgerBtn');
-    const mobileMenu   = document.getElementById('mobileMenu');
-    const mobileClose  = document.getElementById('mobileMenuClose');
-    const mobileLinks  = document.querySelectorAll('.mobile-nav-link');
-
     function openMobileMenu() {
         if (!mobileMenu) return;
         mobileMenu.classList.add('open'); mobileMenu.setAttribute('aria-hidden', 'false');
@@ -411,20 +464,9 @@ async function syncProfile(user) {
         hamburgerBtn?.classList.remove('open'); hamburgerBtn?.setAttribute('aria-expanded', 'false');
         document.body.style.overflow = 'auto';
     }
-    if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMobileMenu);
-    if (mobileClose)  mobileClose.addEventListener('click', closeMobileMenu);
-    if (mobileMenu)   mobileMenu.addEventListener('click', (e) => { const panel = mobileMenu.querySelector('.mobile-menu-panel'); if (panel && !panel.contains(e.target)) closeMobileMenu(); });
-    mobileLinks.forEach(link => link.addEventListener('click', closeMobileMenu));
 
-    /* -----------------------------------------------
-       6. SCROLL REVEAL
-    ----------------------------------------------- */
-    const reveals = document.querySelectorAll('.scroll-reveal');
-    const checkReveal = () => {
-        reveals.forEach(el => { if (el.getBoundingClientRect().top < window.innerHeight - 80) el.classList.add('visible'); });
-    };
-    window.addEventListener('scroll', checkReveal);
-    checkReveal();
+
+
 
     /* -----------------------------------------------
        7. SCHEDULE — INACTIVE DAYS
@@ -444,22 +486,9 @@ async function syncProfile(user) {
     /* -----------------------------------------------
        8. SCHEDULE — DATE PILLS
     ----------------------------------------------- */
-    const dateScrollContainer = document.getElementById('dateScrollContainer');
-    const spotsGrid           = document.getElementById('spotsGrid');
-    const dailyClassesList    = document.getElementById('dailyClassesList');
-    const selectedDateDisplay = document.getElementById('selectedDateDisplay');
-    const addAdminClassBtn    = document.getElementById('addAdminClassBtn');
-    const addInactiveDayBtn   = document.getElementById('addInactiveDayBtn');
-    const adminClassModal     = document.getElementById('adminClassModal');
-    const closeAdminClassModal= document.getElementById('closeAdminClassModal');
-    const adminClassForm      = document.getElementById('adminClassForm');
-    const selectedClassProfile= document.getElementById('selectedClassProfile');
-    const scCoachImg          = document.getElementById('scCoachImg');
-    const scCoachName         = document.getElementById('scCoachName');
-    const scCoachDiscipline   = document.getElementById('scCoachDiscipline');
-    const scCoachNote         = document.getElementById('scCoachNote');
 
-    await loadInactiveDays();
+
+
 
     function buildDatePills() {
         if (!dateScrollContainer) return;
@@ -500,7 +529,11 @@ async function syncProfile(user) {
             dateScrollContainer.appendChild(pill);
         }
     }
-    buildDatePills();
+
+    // Initialize date pills if not already done by the init flow
+    if (dateScrollContainer && dateScrollContainer.innerHTML === '') {
+        buildDatePills();
+    }
 
     /* -----------------------------------------------
        9. ADMIN INACTIVE DAY MODAL
@@ -950,5 +983,35 @@ async function syncProfile(user) {
             if (panel) panel.classList.add('active');
         });
     });
+
+    /* -----------------------------------------------
+       16. FINAL INITIALIZATION
+    ----------------------------------------------- */
+    // 1. Render initial UI states immediately (show loaders)
+    buildDatePills();
+    renderDailyClasses();
+
+    // 2. Fetch data in parallel
+    (async () => {
+        try {
+            const results = await Promise.allSettled([
+                supabase.auth.getSession(),
+                loadInactiveDays()
+            ]);
+
+            const sessionResult = results[0];
+            if (sessionResult.status === 'fulfilled') {
+                const { data: { session }, error } = sessionResult.value;
+                if (!error) updateAuthUI(session?.user || null);
+            }
+
+            // 3. Re-render UI now that we have all data (active/inactive days)
+            buildDatePills();
+            renderDailyClasses();
+        } catch (err) {
+            console.error("Initialization error:", err);
+            showToast("Error al sincronizar datos. Intenta recargar.", "error");
+        }
+    })();
 
 });
