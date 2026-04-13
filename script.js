@@ -33,7 +33,13 @@ const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
    ============================================================ */
 let currentUser    = null;
 let selectedAvatar = 'bolt';
-let selectedDateISO = new Date().toISOString().split('T')[0];
+// Get initial date in Chetumal (UTC-5)
+const getChetumalDate = () => {
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    return new Date(utc + (3600000 * -5));
+};
+let selectedDateISO = getChetumalDate().toISOString().split('T')[0];
 let selectedClassConfig = null;
 let inactiveDays = { weekdays: new Set(), specific: new Set() };
 let isSignupMode = false;
@@ -542,7 +548,7 @@ async function syncProfile(user) {
     function buildDatePills() {
         if (!dateScrollContainer) return;
         dateScrollContainer.innerHTML = '';
-        const today = new Date();
+        const today = getChetumalDate(); // Use Chetumal time for "Today"
 
         for (let i = 0; i < 31; i++) {
             const d = new Date(today);
@@ -553,7 +559,7 @@ async function syncProfile(user) {
             const inactive = inactiveDays.weekdays.has(d.getDay()) || inactiveDays.specific.has(thisISO);
 
             const pill = document.createElement('div');
-            pill.className = `date-pill ${i === 0 ? 'active' : ''} ${inactive ? 'inactive' : ''}`;
+            pill.className = `date-pill ${thisISO === selectedDateISO ? 'active' : ''} ${inactive ? 'inactive' : ''}`;
             pill.dataset.iso = thisISO;
             pill.innerHTML = `
                 <span class="day">${dayName}</span>
@@ -740,9 +746,14 @@ async function syncProfile(user) {
         adminClassForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const discipline     = document.getElementById('adminDiscipline').value;
+            const time           = document.getElementById('adminClassTime').value;
             const coachName      = document.getElementById('adminCoachName').value;
             const coachImg       = document.getElementById('adminCoachImg').value;
-            const note           = document.getElementById('adminClassNote').value;
+            const rawNote        = document.getElementById('adminClassNote').value;
+            
+            // Store time in the note field with a special prefix [T:HH:mm]
+            const note = `[T:${time}]${rawNote}`;
+            
             const recurrenceFreq = recurrenceFreqEl?.value || 'none';
             const recurrenceCount= parseInt(recurrenceCountEl?.value) || 1;
 
@@ -804,23 +815,58 @@ async function syncProfile(user) {
         if (selectedClassProfile) selectedClassProfile.style.display = 'none';
         if (spotsGrid) spotsGrid.innerHTML = '';
 
-        const { data: dayClasses, error } = await supabase
-            .from('classes').select('*').eq('date', selectedDateISO).order('created_at', { ascending: true });
+        const { data: rawClasses, error } = await supabase
+            .from('classes').select('*').eq('date', selectedDateISO);
 
         if (error) { dailyClassesList.innerHTML = `<p style="color:#ff5555;">Error: ${error.message}</p>`; return; }
 
-        dailyClassesList.innerHTML = '';
-        if (!dayClasses || dayClasses.length === 0) {
+        if (!rawClasses || rawClasses.length === 0) {
             dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;">No hay clases programadas para este día.</p>`;
             return;
         }
 
+        // 1. Process and Sort classes
+        const dayClasses = rawClasses.map(cls => {
+            let time = "00:00";
+            let displayNote = cls.note || "";
+            if (cls.note && cls.note.startsWith("[T:")) {
+                const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
+                if (match) {
+                    time = match[1];
+                    displayNote = cls.note.replace(match[0], "");
+                }
+            }
+            const [hh, mm] = time.split(':').map(Number);
+            const hour12 = hh % 12 || 12;
+            const ampm = hh >= 12 ? 'PM' : 'AM';
+            const time12 = `${hour12}:${String(mm).padStart(2, '0')} ${ampm}`;
+            const isPM = hh >= 12;
+
+            return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm };
+        }).sort((a, b) => a.sortVal - b.sortVal);
+
+        // 2. Clear loader and Prepare groups
+        dailyClassesList.innerHTML = '';
+        let currentGroup = null; // 'Matutino' or 'Vespertino'
+
         dayClasses.forEach(cls => {
+            const group = cls.isPM ? 'Vespertino' : 'Matutino';
+            
+            // Add group header if changed
+            if (group !== currentGroup) {
+                currentGroup = group;
+                const header = document.createElement('div');
+                header.className = 'session-group-header';
+                header.innerHTML = `<span>${group}</span>`;
+                dailyClassesList.appendChild(header);
+            }
+
             const occupied  = cls.occupied_spots || [];
             const freeCount = cls.capacity - occupied.length;
             const card = document.createElement('div');
             card.className = 'daily-class-card';
             card.innerHTML = `
+                <div class="daily-class-time-tag">${cls.time12}</div>
                 <div class="daily-class-info">
                     <h4>${cls.discipline}</h4>
                     <p class="coach-name-item" style="display: none;"><i class="fa-solid fa-user"></i> Coach ${cls.coach_name}</p>
@@ -831,12 +877,11 @@ async function syncProfile(user) {
                     <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:0.8rem; margin-left:10px;"></i>
                 </div>`;
             
-            // Delete listener
             const delBtn = card.querySelector('.delete-class-btn');
             if (delBtn) {
                 delBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    if (confirm(`¿Estás seguro de eliminar la clase de ${cls.discipline} con ${cls.coach_name}?`)) {
+                    if (confirm(`¿Estás seguro de eliminar la clase de ${cls.discipline}?`)) {
                         const { error } = await supabase.from('classes').delete().eq('id', cls.id);
                         if (error) showToast(`Error al eliminar: ${error.message}`, 'error');
                         else { showToast('✓ Clase eliminada'); renderDailyClasses(); }
@@ -856,9 +901,9 @@ async function syncProfile(user) {
     function showClassDetails(cls) {
         selectedClassConfig = cls;
         if (scCoachImg)       scCoachImg.src = cls.coach_img;
-        if (scCoachName)      scCoachName.textContent = `Coach ${cls.coach_name.charAt(0).toUpperCase() + cls.coach_name.slice(1)}`;
+        if (scCoachName)      scCoachName.textContent = ""; // Oculto por ahora
         if (scCoachDiscipline)scCoachDiscipline.textContent = `${cls.discipline} · ${cls.capacity} Lugares`;
-        if (scCoachNote)      scCoachNote.textContent = cls.note ? `"${cls.note}"` : '';
+        if (scCoachNote)      scCoachNote.textContent = cls.displayNote ? `"${cls.displayNote}"` : '';
         if (selectedClassProfile) selectedClassProfile.style.display = 'block';
         renderSpotsGrid(cls);
     }

@@ -2464,3 +2464,57 @@ button {
 @media (max-width: 480px) {
     .social-login-group { grid-template-columns: 1fr; }
 }
+
+/* Session grouping and time tags */
+.session-group-header {
+    width: 100%;
+    margin: 30px 0 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.session-group-header span {
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--accent-gold);
+    background: rgba(201, 169, 110, 0.1);
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(201, 169, 110, 0.2);
+}
+.session-group-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(201, 169, 110, 0.2), transparent);
+}
+
+.daily-class-time-tag {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--accent-gold);
+    min-width: 90px;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    margin-right: 20px;
+    display: flex;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .daily-class-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .daily-class-time-tag {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+        padding-bottom: 8px;
+        margin-right: 0;
+    }
+}
