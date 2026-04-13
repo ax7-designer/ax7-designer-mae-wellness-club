@@ -2518,3 +2518,76 @@ button {
         margin-right: 0;
     }
 }
+/* Discipline Filter Bar */
+.discipline-filter-bar {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-heading);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.filter-btn i {
+    font-size: 0.9rem;
+    color: var(--accent-gold);
+    transition: transform 0.3s ease;
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.filter-btn:hover i {
+    transform: scale(1.2);
+}
+
+.filter-btn.active {
+    background: var(--accent-gold);
+    border-color: var(--accent-gold);
+    color: #0d0d0d;
+    box-shadow: 0 4px 15px rgba(201, 169, 110, 0.3);
+}
+
+.filter-btn.active i {
+    color: #0d0d0d;
+}
+
+/* User's requested "X" on active filter */
+.filter-btn.active:not([data-filter="all"])::after {
+    content: '\f00d'; /* fa-xmark */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-left: 8px;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+@media (max-width: 600px) {
+    .discipline-filter-bar {
+        gap: 8px;
+    }
+    .filter-btn {
+        padding: 8px 16px;
+        font-size: 0.75rem;
+    }
+}

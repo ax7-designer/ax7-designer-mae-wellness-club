@@ -26,6 +26,12 @@ const DISCIPLINE_CAPACITY = {
     'Pilates': 4
 };
 
+const DISCIPLINE_ICONS = {
+    'Pilates': 'fa-child-reaching',
+    'Train': 'fa-dumbbell',
+    'Indoor Cycling': 'fa-bicycle'
+};
+
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 /* ============================================================
@@ -33,6 +39,7 @@ const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
    ============================================================ */
 let currentUser    = null;
 let selectedAvatar = 'bolt';
+let activeDisciplineFilter = 'all'; 
 // Get initial date in Chetumal (UTC-5)
 const getChetumalDate = () => {
     const now = new Date();
@@ -148,12 +155,14 @@ document.addEventListener('DOMContentLoaded', async () => {
        0. ATTACH LISTENERS IMMEDIATELY
     ----------------------------------------------- */
     // Attaching listeners early ensures UI is interactive even if data fetch is slow
-    if (loginBtn) {
-        loginBtn.addEventListener('click', () => {
+    // Use a stable delegated listener for the login/profile button
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#loginBtn');
+        if (btn) {
             if (currentUser) openProfileModal(currentUser);
             else openModal();
-        });
-    }
+        }
+    });
 
     if (btnGoogle) {
         btnGoogle.addEventListener('click', async () => {
@@ -206,6 +215,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.querySelectorAll('.scroll-reveal').forEach(el => revealObserver.observe(el));
 
+    /* -----------------------------------------------
+       1.5 DISCIPLINE FILTERS
+    ----------------------------------------------- */
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeDisciplineFilter = btn.dataset.filter;
+            renderDailyClasses();
+        });
+    });
+
 
 
     /* -----------------------------------------------
@@ -223,10 +245,11 @@ async function syncProfile(user) {
             email_fallback: user.email,
             nickname: user.user_metadata?.nickname || user.email.split('@')[0],
             avatar: user.user_metadata?.avatar || 'bolt',
+            preferred_discipline: user.user_metadata?.preferred_discipline || 'all',
             credits: 0
         });
     } else {
-        // Ensure email_fallback is set if it was missing
+        // Ensure email_fallback and other basics are present
         await supabase.from('profiles').update({ email_fallback: user.email }).eq('id', user.id);
     }
 }
@@ -249,6 +272,7 @@ async function syncProfile(user) {
         if (document.getElementById('phoneInput'))     document.getElementById('phoneInput').value     = profile?.phone     || '';
         if (document.getElementById('emergencyContactInput')) document.getElementById('emergencyContactInput').value = profile?.emergency || '';
         if (document.getElementById('profileCreditsCount'))  document.getElementById('profileCreditsCount').textContent = profile?.credits || '0';
+        if (document.getElementById('interestInput'))  document.getElementById('interestInput').value  = profile?.preferred_discipline || 'all';
         
         if (profileGreeting) profileGreeting.textContent = `Hola, ${nickname}`;
         selectedAvatar = avatar;
@@ -268,12 +292,13 @@ async function syncProfile(user) {
             const birthday = document.getElementById('birthdayInput')?.value.trim() || '';
             const phone    = document.getElementById('phoneInput')?.value.trim() || '';
             const emergency= document.getElementById('emergencyContactInput')?.value.trim() || '';
+            const interest = document.getElementById('interestInput')?.value || 'all';
 
             saveProfileBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Guardando...`;
             saveProfileBtn.disabled = true;
 
             // Updated meta in Auth
-            await supabase.auth.updateUser({ data: { nickname, avatar: selectedAvatar, full_name: fullName } });
+            await supabase.auth.updateUser({ data: { nickname, avatar: selectedAvatar, full_name: fullName, preferred_discipline: interest } });
             
             // Upsert into Profiles table
             const { error } = await supabase.from('profiles').upsert({
@@ -285,6 +310,7 @@ async function syncProfile(user) {
                 phone: phone,
                 emergency: emergency,
                 avatar: selectedAvatar,
+                preferred_discipline: interest,
                 updated_at: new Date()
             });
 
@@ -349,9 +375,17 @@ async function syncProfile(user) {
 
         if (user) {
             // Priority: Table profile > Meta > Derived from email
-            const { data: profile } = await supabase.from('profiles').select('nickname, avatar').eq('id', user.id).single();
+            const { data: profile } = await supabase.from('profiles').select('nickname, avatar, preferred_discipline').eq('id', user.id).single();
             const nickname  = profile?.nickname || user.user_metadata?.nickname || user.email.split('@')[0];
             const avatar    = profile?.avatar   || user.user_metadata?.avatar   || 'bolt';
+
+            // Auto-filter by preference if not already set manually
+            if (profile?.preferred_discipline && profile.preferred_discipline !== 'all' && activeDisciplineFilter === 'all') {
+                activeDisciplineFilter = profile.preferred_discipline;
+                const filterBtns = document.querySelectorAll('.filter-btn');
+                filterBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.filter === activeDisciplineFilter));
+                renderDailyClasses();
+            }
             
             const iconClass = AVATAR_ICON_MAP[avatar] || 'fa-bolt';
             const adminTag  = isAdmin(user)
@@ -825,28 +859,36 @@ async function syncProfile(user) {
             return;
         }
 
-        // 1. Process and Sort classes
-        const dayClasses = rawClasses.map(cls => {
-            let time = "00:00";
-            let displayNote = cls.note || "";
-            if (cls.note && cls.note.startsWith("[T:")) {
-                const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
-                if (match) {
-                    time = match[1];
-                    displayNote = cls.note.replace(match[0], "");
+        // 1. Process, Filter and Sort classes
+        const dayClasses = rawClasses
+            .map(cls => {
+                let time = "00:00";
+                let displayNote = cls.note || "";
+                if (cls.note && cls.note.startsWith("[T:")) {
+                    const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
+                    if (match) {
+                        time = match[1];
+                        displayNote = cls.note.replace(match[0], "");
+                    }
                 }
-            }
-            const [hh, mm] = time.split(':').map(Number);
-            const hour12 = hh % 12 || 12;
-            const ampm = hh >= 12 ? 'PM' : 'AM';
-            const time12 = `${hour12}:${String(mm).padStart(2, '0')} ${ampm}`;
-            const isPM = hh >= 12;
+                const [hh, mm] = time.split(':').map(Number);
+                const hour12 = hh % 12 || 12;
+                const ampm = hh >= 12 ? 'PM' : 'AM';
+                const time12 = `${hour12}:${String(mm).padStart(2, '0')} ${ampm}`;
+                const isPM = hh >= 12;
 
-            return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm };
-        }).sort((a, b) => a.sortVal - b.sortVal);
+                return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm };
+            })
+            .filter(cls => activeDisciplineFilter === 'all' || cls.discipline === activeDisciplineFilter)
+            .sort((a, b) => a.sortVal - b.sortVal);
 
         // 2. Clear loader and Prepare groups
         dailyClassesList.innerHTML = '';
+        if (dayClasses.length === 0) {
+            dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;margin-top:20px;">No hay clases de <strong>${activeDisciplineFilter}</strong> para hoy.</p>`;
+            return;
+        }
+        
         let currentGroup = null; // 'Matutino' or 'Vespertino'
 
         dayClasses.forEach(cls => {
@@ -865,10 +907,14 @@ async function syncProfile(user) {
             const freeCount = cls.capacity - occupied.length;
             const card = document.createElement('div');
             card.className = 'daily-class-card';
+            const discIcon = DISCIPLINE_ICONS[cls.discipline] || 'fa-star';
             card.innerHTML = `
                 <div class="daily-class-time-tag">${cls.time12}</div>
                 <div class="daily-class-info">
-                    <h4>${cls.discipline}</h4>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid ${discIcon}" style="color:var(--accent-gold); font-size:1.1rem; width:20px; text-align:center;"></i>
+                        <h4 style="margin:0;">${cls.discipline}</h4>
+                    </div>
                     <p class="coach-name-item" style="display: none;"><i class="fa-solid fa-user"></i> Coach ${cls.coach_name}</p>
                 </div>
                 <div class="daily-class-meta">

@@ -321,6 +321,14 @@
             </div>
             
             <div class="class-view" id="classViewContainer">
+                <!-- Discipline Filters -->
+                <div class="discipline-filter-bar" id="disciplineFilterBar">
+                    <button class="filter-btn active" data-filter="all"><i class="fa-solid fa-layer-group"></i> Todas</button>
+                    <button class="filter-btn" data-filter="Pilates"><i class="fa-solid fa-child-reaching"></i> Pilates</button>
+                    <button class="filter-btn" data-filter="Train"><i class="fa-solid fa-dumbbell"></i> Train</button>
+                    <button class="filter-btn" data-filter="Indoor Cycling"><i class="fa-solid fa-bicycle"></i> Indoor</button>
+                </div>
+
                 <!-- Day header -->
                 <div class="day-header-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                     <h3 id="selectedDateDisplay" style="margin: 0;">Clases de Hoy</h3>
@@ -562,6 +570,15 @@
                 <div class="input-group">
                     <label for="emergencyContactInput">Contacto de Emergencia</label>
                     <input type="text" id="emergencyContactInput" placeholder="Nombre y teléfono">
+                </div>
+                <div class="input-group">
+                    <label for="interestInput">Disciplina de Interés (Auto-filtrado)</label>
+                    <select id="interestInput" style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.5); color: #fff; font-family: inherit;">
+                        <option value="all">Todas las disciplinas</option>
+                        <option value="Pilates">Pilates Reformer</option>
+                        <option value="Train">Train</option>
+                        <option value="Indoor Cycling">Indoor Cycling</option>
+                    </select>
                 </div>
             </div>
 
