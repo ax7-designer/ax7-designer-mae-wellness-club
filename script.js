@@ -523,7 +523,7 @@ async function syncProfile(user) {
     async function loadInactiveDays() {
         try {
             const { data } = await supabase.from('inactive_days').select('*');
-            inactiveDays.weekdays = new Set();
+            inactiveDays.weekdays = new Set([0]); // Dom por defecto inactivo
             inactiveDays.specific = new Set();
             (data || []).forEach(row => {
                 if (row.type === 'weekday') inactiveDays.weekdays.add(row.weekday);
@@ -823,7 +823,7 @@ async function syncProfile(user) {
             card.innerHTML = `
                 <div class="daily-class-info">
                     <h4>${cls.discipline}</h4>
-                    <p><i class="fa-solid fa-user"></i> Coach ${cls.coach_name}</p>
+                    <p class="coach-name-item" style="display: none;"><i class="fa-solid fa-user"></i> Coach ${cls.coach_name}</p>
                 </div>
                 <div class="daily-class-meta">
                     <span class="spots-badge">${freeCount} lugares libres</span>
@@ -856,7 +856,7 @@ async function syncProfile(user) {
     function showClassDetails(cls) {
         selectedClassConfig = cls;
         if (scCoachImg)       scCoachImg.src = cls.coach_img;
-        if (scCoachName)      scCoachName.textContent = `Coach ${cls.coach_name}`;
+        if (scCoachName)      scCoachName.textContent = `Coach ${cls.coach_name.charAt(0).toUpperCase() + cls.coach_name.slice(1)}`;
         if (scCoachDiscipline)scCoachDiscipline.textContent = `${cls.discipline} · ${cls.capacity} Lugares`;
         if (scCoachNote)      scCoachNote.textContent = cls.note ? `"${cls.note}"` : '';
         if (selectedClassProfile) selectedClassProfile.style.display = 'block';
@@ -981,7 +981,7 @@ async function syncProfile(user) {
                     const spotLabel = document.getElementById('reserveSpotLabel');
                     if (spotLabel) spotLabel.textContent = `Lugar #${i}`;
                     const classLabel = document.getElementById('reserveClassLabel');
-                    if (classLabel) classLabel.textContent = `${cls.discipline} · Coach ${cls.coach_name}`;
+                    if (classLabel) classLabel.textContent = `${cls.discipline}`;
                     if (reserveModal) reserveModal.classList.add('active');
                 });
             }
