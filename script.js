@@ -863,12 +863,14 @@ async function syncProfile(user) {
         const dayClasses = rawClasses
             .map(cls => {
                 let time = "00:00";
+                let hasValidTime = false;
                 let displayNote = cls.note || "";
                 if (cls.note && cls.note.startsWith("[T:")) {
                     const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
                     if (match) {
                         time = match[1];
                         displayNote = cls.note.replace(match[0], "");
+                        hasValidTime = true;
                     }
                 }
                 const [hh, mm] = time.split(':').map(Number);
@@ -877,19 +879,21 @@ async function syncProfile(user) {
                 const time12 = `${hour12}:${String(mm).padStart(2, '0')} ${ampm}`;
                 const isPM = hh >= 12;
 
-                return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm };
+                return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm, hasValidTime };
             })
+            .filter(cls => cls.hasValidTime) // EXTERMINATE 12:00 AM BUG
             .filter(cls => activeDisciplineFilter === 'all' || cls.discipline === activeDisciplineFilter)
             .sort((a, b) => a.sortVal - b.sortVal);
 
         // 2. Clear loader and Prepare groups
         dailyClassesList.innerHTML = '';
         if (dayClasses.length === 0) {
-            dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;margin-top:20px;">No hay clases de <strong>${activeDisciplineFilter}</strong> para hoy.</p>`;
+            dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;margin-top:20px;">No hay clases disponibles para estos criterios.</p>`;
             return;
         }
         
         let currentGroup = null; // 'Matutino' or 'Vespertino'
+        let lastSortVal = null;
 
         dayClasses.forEach(cls => {
             const group = cls.isPM ? 'Vespertino' : 'Matutino';
@@ -901,7 +905,13 @@ async function syncProfile(user) {
                 header.className = 'session-group-header';
                 header.innerHTML = `<span>${group}</span>`;
                 dailyClassesList.appendChild(header);
+            } else if (lastSortVal !== null && lastSortVal !== cls.sortVal) {
+                // Add spacer between different hours within same group
+                const spacer = document.createElement('div');
+                spacer.className = 'time-slot-spacer';
+                dailyClassesList.appendChild(spacer);
             }
+            lastSortVal = cls.sortVal;
 
             const occupied  = cls.occupied_spots || [];
             const freeCount = cls.capacity - occupied.length;
