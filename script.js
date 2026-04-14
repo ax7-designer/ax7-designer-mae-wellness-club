@@ -374,7 +374,7 @@ async function syncProfile(user) {
 
         if (user) {
             // Priority: Table profile > Meta > Derived from email
-            const { data: profile } = await supabase.from('profiles').select('nickname, avatar, preferred_discipline').eq('id', user.id).single();
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
             const nickname  = profile?.nickname || user.user_metadata?.nickname || user.email.split('@')[0];
             const avatar    = profile?.avatar   || user.user_metadata?.avatar   || 'bolt';
 
