@@ -241,6 +241,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // Avatar Selection Logic
+    avatarOptions.forEach(opt => {
+        opt.addEventListener('click', () => {
+            selectedAvatar = opt.dataset.avatar;
+            avatarOptions.forEach(el => el.classList.remove('active'));
+            opt.classList.add('active');
+            
+            // Update the live preview icon if it exists
+            if (profileAvatarDisp) {
+                const iconClass = AVATAR_ICON_MAP[selectedAvatar] || 'fa-bolt';
+                profileAvatarDisp.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+            }
+        });
+    });
+
 
 
     /* -----------------------------------------------
@@ -287,6 +302,16 @@ async function syncProfile(user) {
         const adminBadge = document.getElementById('profileAdminBadge');
         if (adminBadge) adminBadge.style.display = isAdmin(user) ? 'flex' : 'none';
 
+        // Load current avatar
+        selectedAvatar = profile?.avatar || user.user_metadata?.avatar || 'bolt';
+        avatarOptions.forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.avatar === selectedAvatar);
+        });
+        if (profileAvatarDisp) {
+            const iconClass = AVATAR_ICON_MAP[selectedAvatar] || 'fa-bolt';
+            profileAvatarDisp.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+        }
+
         profileModal.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
@@ -301,7 +326,13 @@ async function syncProfile(user) {
             saveProfileBtn.disabled = true;
 
             // Updated meta in Auth
-            await supabase.auth.updateUser({ data: { full_name: fullName, preferred_discipline: interest } });
+            await supabase.auth.updateUser({ 
+                data: { 
+                    full_name: fullName, 
+                    preferred_discipline: interest,
+                    avatar: selectedAvatar
+                } 
+            });
             
             // Upsert into Profiles table
             const { error } = await supabase.from('profiles').upsert({
@@ -309,6 +340,7 @@ async function syncProfile(user) {
                 email_fallback: currentUser.email,
                 full_name: fullName,
                 birthday: birthday,
+                avatar: selectedAvatar,
                 preferred_discipline: interest,
                 updated_at: new Date()
             });
@@ -752,6 +784,14 @@ async function syncProfile(user) {
     if (addAdminClassBtn) {
         addAdminClassBtn.addEventListener('click', () => {
             if (adminClassModal) {
+                // Saturday constraint Check
+                const d = new Date(selectedDateISO + 'T12:00:00');
+                const timeInput = document.getElementById('adminClassTime');
+                if (d.getDay() === 6) { // Saturday
+                    if (timeInput) timeInput.value = "08:00";
+                    showToast('Nota: Los sábados únicamente operamos a las 8:00 AM', 'info');
+                }
+
                 updateRecurrencePreview();
                 adminClassModal.classList.add('active');
             }
@@ -784,6 +824,12 @@ async function syncProfile(user) {
             const coachImg       = document.getElementById('adminCoachImg').value;
             const rawNote        = document.getElementById('adminClassNote').value;
             
+            // Saturday Protection
+            const dCheck = new Date(selectedDateISO + 'T12:00:00');
+            if (dCheck.getDay() === 6 && time !== "08:00") {
+                return showToast('Error: Los sábados únicamente se permiten clases a las 08:00 AM', 'error');
+            }
+
             // Store time in the note field with a special prefix [T:HH:mm]
             const note = `[T:${time}]${rawNote}`;
             

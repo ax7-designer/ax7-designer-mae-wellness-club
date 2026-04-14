@@ -2331,6 +2331,62 @@ button {
     cursor: default;
 }
 .spot.mine .status { color: #2a9d8f; font-size: 0.65rem; }
+
+/* ==========================================
+   PROFILE AVATAR SELECTOR
+   ========================================== */
+.avatar-section {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.avatar-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 15px;
+}
+
+.avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+}
+
+.avatar-option {
+    aspect-ratio: 1;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    transition: all var(--transition-fast);
+}
+
+.avatar-option:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.avatar-option.active {
+    background: rgba(201, 169, 110, 0.15);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    box-shadow: 0 0 15px rgba(201, 169, 110, 0.2);
+}
+
+@media (max-width: 480px) {
+    .avatar-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
 .spot.mine .mine-tag {
     font-size: 0.55rem;
     font-weight: 800;
