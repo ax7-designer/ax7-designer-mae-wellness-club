@@ -617,11 +617,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Update the local config cache
                     selectedClassConfig = payload.new;
                     // Format display info for details view
+                if (scCoachImg) {
                     const discImg = DISCIPLINE_IMAGES[selectedClassConfig.discipline.toLowerCase()];
-                    if (scCoachImg) scCoachImg.src = discImg || selectedClassConfig.coach_img || 'MAE LOGO PNG_x.png';
+                    const fallback = 'mae_logo.png';
+                    const finalSrc = discImg || selectedClassConfig.coach_img || fallback;
+                    
+                    scCoachImg.style.opacity = '0';
+                    scCoachImg.src = finalSrc;
+                    scCoachImg.onload = () => { scCoachImg.style.opacity = '1'; };
+                    scCoachImg.onerror = () => {
+                        console.warn("Realtime Image Load Error");
+                        scCoachImg.src = fallback;
+                        scCoachImg.style.opacity = '1';
+                        scCoachImg.onerror = null;
+                    };
+                    
                     if (scCoachDiscipline) scCoachDiscipline.textContent = `${selectedClassConfig.discipline} · ${selectedClassConfig.capacity} Lugares`;
-                    // Refill the grid
                     renderSpotsGrid(selectedClassConfig);
+                }
                 }
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
@@ -1189,14 +1202,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function showClassDetails(cls) {
         selectedClassConfig = cls;
-        // Case-insensitive image lookup
         const discImg = DISCIPLINE_IMAGES[cls.discipline.toLowerCase()];
+        const fallback = 'mae_logo.png';
+        const finalSrc = discImg || cls.coach_img || fallback;
+
         if (scCoachImg) {
-            scCoachImg.src = discImg || cls.coach_img || 'MAE LOGO PNG_x.png';
+            // Reset state for new image
+            scCoachImg.style.opacity = '0';
             scCoachImg.onerror = () => {
                 console.warn("Image Load Error, falling back to logo.");
-                scCoachImg.src = 'MAE LOGO PNG_x.png';
+                scCoachImg.src = fallback;
+                scCoachImg.style.opacity = '1';
+                scCoachImg.onerror = null;
             };
+            scCoachImg.onload = () => {
+                scCoachImg.style.opacity = '1';
+            };
+            scCoachImg.src = finalSrc;
         }
         if (scCoachName) scCoachName.textContent = ""; // Oculto por ahora
         if (scCoachDiscipline) scCoachDiscipline.textContent = `${cls.discipline} · ${cls.capacity} Lugares`;
