@@ -601,6 +601,43 @@ async function syncProfile(user) {
         }
     });
 
+    /**
+     * Set up Supabase Realtime subscriptions to keep UI in sync across different devices/users
+     */
+    function setupRealtimeSubscriptions() {
+        supabase
+            .channel('schema-db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, (payload) => {
+                console.log('Realtime change in classes:', payload);
+                // 1. Refresh the daily list (free spots badge, etc.)
+                renderDailyClasses();
+                
+                // 2. If the user is currently viewing the spots grid for the changed class, refresh it
+                if (payload.new && selectedClassConfig && payload.new.id === selectedClassConfig.id) {
+                    // Update the local config cache
+                    selectedClassConfig = payload.new;
+                    // Format display info for details view
+                    const discImg = DISCIPLINE_IMAGES[selectedClassConfig.discipline.toLowerCase()];
+                    if (scCoachImg) scCoachImg.src = discImg || selectedClassConfig.coach_img || 'MAE LOGO PNG_x.png';
+                    if (scCoachDiscipline) scCoachDiscipline.textContent = `${selectedClassConfig.discipline} · ${selectedClassConfig.capacity} Lugares`;
+                    // Refill the grid
+                    renderSpotsGrid(selectedClassConfig);
+                }
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
+                if (currentUser && payload.new && payload.new.id === currentUser.id) {
+                    console.log('Realtime profile update:', payload.new);
+                    const creditDisp = document.getElementById('profileCreditsCount');
+                    if (creditDisp) creditDisp.textContent = payload.new.credits || '0';
+                    renderMyReservations();
+                }
+            })
+            .subscribe();
+    }
+    
+    // Call realtime setup
+    setupRealtimeSubscriptions();
+
     const resetPasswordForm = document.getElementById('resetPasswordForm');
     if (resetPasswordForm) {
         resetPasswordForm.addEventListener('submit', async (e) => {
@@ -1064,12 +1101,14 @@ async function syncProfile(user) {
             .sort((a, b) => {
                 // Primary Sort: By time
                 if (a.sortVal !== b.sortVal) return a.sortVal - b.sortVal;
-                // Secondary Sort (Safety): Prioritize classes where current user is reserved
-                const aMe = Array.isArray(a.occupied_spots) && a.occupied_spots.some(s => s.userId === currentUser?.id);
-                const bMe = Array.isArray(b.occupied_spots) && b.occupied_spots.some(s => s.userId === currentUser?.id);
-                if (aMe && !bMe) return -1;
-                if (!aMe && bMe) return 1;
-                return 0;
+
+                // Secondary Sort (STABILITY): Ensuring all users see the SAME record for a slot.
+                // If duplicates exist, pick the one with most reservations, then oldest ID.
+                const aCount = Array.isArray(a.occupied_spots) ? a.occupied_spots.length : 0;
+                const bCount = Array.isArray(b.occupied_spots) ? b.occupied_spots.length : 0;
+                
+                if (aCount !== bCount) return bCount - aCount; // Most occupied first (prioritizes records with data)
+                return a.id - b.id; // Oldest ID first (stable fallback)
             })
             .filter(cls => {
                 const key = `${cls.discipline}_${cls.time}`;
