@@ -221,9 +221,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filterButtons = document.querySelectorAll('.filter-btn');
     filterButtons.forEach(btn => {
         btn.addEventListener('click', () => {
+            const isAlreadyActive = btn.classList.contains('active');
             filterButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activeDisciplineFilter = btn.dataset.filter;
+            
+            if (isAlreadyActive && btn.dataset.filter !== 'all') {
+                // If clicking an active filter (that is not "Todas"), reset to 'all'
+                activeDisciplineFilter = 'all';
+                document.querySelector('.filter-btn[data-filter="all"]')?.classList.add('active');
+            } else {
+                btn.classList.add('active');
+                activeDisciplineFilter = btn.dataset.filter;
+            }
             renderDailyClasses();
         });
     });
@@ -860,6 +868,7 @@ async function syncProfile(user) {
         }
 
         // 1. Process, Filter and Sort classes
+        const seenSlots = new Set(); // For de-duplication safety
         const dayClasses = rawClasses
             .map(cls => {
                 let time = "00:00";
@@ -881,7 +890,13 @@ async function syncProfile(user) {
 
                 return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm, hasValidTime };
             })
-            .filter(cls => cls.hasValidTime) // EXTERMINATE 12:00 AM BUG
+            .filter(cls => {
+                if (!cls.hasValidTime) return false;
+                const key = `${cls.discipline}_${cls.time}`;
+                if (seenSlots.has(key)) return false; // DEDUPLICATION RULE
+                seenSlots.add(key);
+                return true;
+            })
             .filter(cls => activeDisciplineFilter === 'all' || cls.discipline === activeDisciplineFilter)
             .sort((a, b) => a.sortVal - b.sortVal);
 

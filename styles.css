@@ -252,18 +252,15 @@ button {
 
 #loginBtn {
     position: relative !important;
-    z-index: 1010 !important;
+    z-index: 2000 !important;
     pointer-events: auto !important;
     cursor: pointer !important;
+    display: inline-flex !important;
+    background: rgba(255, 255, 255, 0.05); /* Ensure it has a clickable area */
 }
 
 #loginBtn * {
-    pointer-events: none !important; /* Ensure children don't capture clicks */
-}
-
-#loginBtn {
-    /* Re-enable pointer events for the button itself if it was somehow disabled */
-    display: inline-flex !important;
+    pointer-events: none; /* Children should not capture clicks, only the button */
 }
 
 .icon-btn {
