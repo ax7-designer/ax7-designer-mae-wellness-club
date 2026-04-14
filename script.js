@@ -35,9 +35,9 @@ const DISCIPLINE_ICONS = {
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const DISCIPLINE_IMAGES = {
-    'Pilates': 'pilates_deseada.jpg',
-    'Train': 'train_deseada.jpg',
-    'Indoor Cycling': 'indoor_deseada.jpg'
+    'pilates': 'pilates_deseada.jpg',
+    'train': 'train_deseada.jpg',
+    'indoor cycling': 'indoor_deseada.jpg'
 };
 
 /* ============================================================
@@ -1150,16 +1150,26 @@ async function syncProfile(user) {
 
     function showClassDetails(cls) {
         selectedClassConfig = cls;
-        // Priority: If discipline image exists, use it to maintain boutique aesthetic
-        const discImg = DISCIPLINE_IMAGES[cls.discipline];
+        // Case-insensitive image lookup
+        const discImg = DISCIPLINE_IMAGES[cls.discipline.toLowerCase()];
         if (scCoachImg) {
             scCoachImg.src = discImg || cls.coach_img || 'MAE LOGO PNG_x.png';
-            scCoachImg.onerror = () => { scCoachImg.src = 'MAE LOGO PNG_x.png'; };
+            scCoachImg.onerror = () => { 
+                console.warn("Image Load Error, falling back to logo.");
+                scCoachImg.src = 'MAE LOGO PNG_x.png'; 
+            };
         }
         if (scCoachName)      scCoachName.textContent = ""; // Oculto por ahora
         if (scCoachDiscipline)scCoachDiscipline.textContent = `${cls.discipline} · ${cls.capacity} Lugares`;
         if (scCoachNote)      scCoachNote.textContent = cls.displayNote ? `"${cls.displayNote}"` : '';
-        if (selectedClassProfile) selectedClassProfile.style.display = 'block';
+        
+        if (selectedClassProfile) {
+            selectedClassProfile.style.display = 'block';
+            // Smooth scroll to the details/spots section
+            setTimeout(() => {
+                selectedClassProfile.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
         renderSpotsGrid(cls);
     }
 
