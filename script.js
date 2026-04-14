@@ -159,10 +159,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('#loginBtn');
         if (btn) {
-            if (currentUser) openProfileModal(currentUser);
-            else openModal();
+            e.preventDefault(); e.stopPropagation();
+            if (currentUser) {
+                console.log("Opening profile for", currentUser.email);
+                openProfileModal(currentUser);
+            } else {
+                openModal();
+            }
         }
-    });
+    }, true); // Use capture phase for maximum priority
 
     if (btnGoogle) {
         btnGoogle.addEventListener('click', async () => {
@@ -271,21 +276,14 @@ async function syncProfile(user) {
 
         // Fetch official profile from table
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        const nickname = profile?.nickname || user.user_metadata?.nickname || user.email.split('@')[0];
-        const avatar   = profile?.avatar   || user.user_metadata?.avatar   || 'bolt';
         
         if (document.getElementById('fullNameInput'))  document.getElementById('fullNameInput').value  = profile?.full_name || '';
-        if (document.getElementById('nicknameInput'))  document.getElementById('nicknameInput').value  = nickname;
         if (document.getElementById('birthdayInput'))  document.getElementById('birthdayInput').value  = profile?.birthday  || '';
-        if (document.getElementById('phoneInput'))     document.getElementById('phoneInput').value     = profile?.phone     || '';
-        if (document.getElementById('emergencyContactInput')) document.getElementById('emergencyContactInput').value = profile?.emergency || '';
         if (document.getElementById('profileCreditsCount'))  document.getElementById('profileCreditsCount').textContent = profile?.credits || '0';
         if (document.getElementById('interestInput'))  document.getElementById('interestInput').value  = profile?.preferred_discipline || 'all';
         
-        if (profileGreeting) profileGreeting.textContent = `Hola, ${nickname}`;
-        selectedAvatar = avatar;
-        syncAvatarUI(avatar);
-
+        if (profileGreeting) profileGreeting.textContent = `Hola, ${user.user_metadata?.full_name || user.email}`;
+        
         const adminBadge = document.getElementById('profileAdminBadge');
         if (adminBadge) adminBadge.style.display = isAdmin(user) ? 'flex' : 'none';
 
@@ -295,29 +293,22 @@ async function syncProfile(user) {
 
     if (saveProfileBtn) {
         saveProfileBtn.addEventListener('click', async () => {
-            const nickname = document.getElementById('nicknameInput')?.value.trim() || 'Miembro';
             const fullName = document.getElementById('fullNameInput')?.value.trim() || '';
             const birthday = document.getElementById('birthdayInput')?.value.trim() || '';
-            const phone    = document.getElementById('phoneInput')?.value.trim() || '';
-            const emergency= document.getElementById('emergencyContactInput')?.value.trim() || '';
             const interest = document.getElementById('interestInput')?.value || 'all';
 
             saveProfileBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Guardando...`;
             saveProfileBtn.disabled = true;
 
             // Updated meta in Auth
-            await supabase.auth.updateUser({ data: { nickname, avatar: selectedAvatar, full_name: fullName, preferred_discipline: interest } });
+            await supabase.auth.updateUser({ data: { full_name: fullName, preferred_discipline: interest } });
             
             // Upsert into Profiles table
             const { error } = await supabase.from('profiles').upsert({
                 id: currentUser.id,
                 email_fallback: currentUser.email,
                 full_name: fullName,
-                nickname: nickname,
                 birthday: birthday,
-                phone: phone,
-                emergency: emergency,
-                avatar: selectedAvatar,
                 preferred_discipline: interest,
                 updated_at: new Date()
             });
