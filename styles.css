@@ -2708,3 +2708,95 @@ button {
     width: 100%;
     height: 22px;
 }
+
+/* ==========================================
+   MY RESERVATIONS STYLES
+   ========================================== */
+.my-reservations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 25px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Custom Scrollbar for the list */
+.my-reservations-list::-webkit-scrollbar {
+    width: 4px;
+}
+.my-reservations-list::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+}
+.my-reservations-list::-webkit-scrollbar-thumb {
+    background: var(--accent-gold);
+    border-radius: 10px;
+}
+
+.reservation-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all var(--transition-fast);
+}
+
+.reservation-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(201, 169, 110, 0.3);
+}
+
+.res-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.res-discipline {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.res-time-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.res-spot-badge {
+    background: rgba(201, 169, 110, 0.1);
+    color: var(--accent-gold);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.reservation-cancel-btn {
+    background: none;
+    border: none;
+    color: #e63946;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+}
+
+.reservation-cancel-btn:hover {
+    background: rgba(230, 57, 70, 0.15);
+    opacity: 1;
+    transform: scale(1.1);
+}
+

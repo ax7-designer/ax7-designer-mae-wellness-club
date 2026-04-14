@@ -320,6 +320,7 @@ async function syncProfile(user) {
 
         profileModal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        renderMyReservations();
     }
 
     if (saveProfileBtn) {
@@ -399,6 +400,127 @@ async function syncProfile(user) {
             updateAuthUI(null);
             window.location.reload();
         });
+    }
+
+    /**
+     * Renders upcoming classes reserved by the current user
+     */
+    async function renderMyReservations() {
+        const listContainer = document.getElementById('myReservationsList');
+        if (!listContainer || !currentUser) return;
+
+        listContainer.innerHTML = '<p style="text-align:center;color:var(--accent-gold);padding:10px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando tus clases...</p>';
+
+        try {
+            // Fetch all classes where the user appears in occupied_spots
+            // We fetch future or current classes (optional: we can just fetch all and filter in JS)
+            const { data, error } = await supabase
+                .from('classes')
+                .select('*')
+                .filter('occupied_spots', 'cs', JSON.stringify([{ userId: currentUser.id }]));
+
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; font-style: italic; padding: 10px;">No tienes clases reservadas aún.</p>';
+                return;
+            }
+
+            // Sort by date and time
+            const sorted = data.map(cls => {
+                let time = "00:00";
+                if (cls.note && cls.note.startsWith("[T:")) {
+                    const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
+                    if (match) time = match[1];
+                }
+                const [hh, mm] = time.split(':').map(Number);
+                const hour12 = hh % 12 || 12;
+                const ampm = hh >= 12 ? 'PM' : 'AM';
+                const time12 = `${hour12}:${String(mm).padStart(2, '0')} ${ampm}`;
+                // Using 12:00:00 to avoid timezone shifts during sorting
+                return { ...cls, time, time12, sortVal: new Date(cls.date + 'T12:00:00').getTime() + (hh * 60 + mm) * 60000 };
+            }).sort((a, b) => a.sortVal - b.sortVal);
+
+            listContainer.innerHTML = '';
+            sorted.forEach(cls => {
+                const item = document.createElement('div');
+                item.className = 'reservation-item';
+                
+                // Find user's spot number
+                const spots = Array.isArray(cls.occupied_spots) ? cls.occupied_spots : [];
+                const mySpot = spots.find(s => s.userId === currentUser.id)?.spot || '?';
+                
+                // Format date nicely
+                const dateObj = new Date(cls.date + 'T12:00:00');
+                const dateStr = `${DAYS_ES[dateObj.getDay()]} ${dateObj.getDate()}`;
+
+                item.innerHTML = `
+                    <div class="res-info">
+                        <div class="res-discipline">${cls.discipline}</div>
+                        <div class="res-time-date">
+                            <i class="fa-regular fa-calendar"></i> ${dateStr} 
+                            <i class="fa-regular fa-clock" style="margin-left:5px;"></i> ${cls.time12}
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span class="res-spot-badge">Lugar #${mySpot}</span>
+                        <button class="reservation-cancel-btn" title="Cancelar Reserva">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                `;
+
+                const cancelBtn = item.querySelector('.reservation-cancel-btn');
+                cancelBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    cancelReservation(cls);
+                });
+
+                listContainer.appendChild(item);
+            });
+
+        } catch (err) {
+            console.error("Error rendering reservations:", err);
+            listContainer.innerHTML = '<p style="text-align:center;color:#e63946;font-size:0.8rem;">Error al cargar reservas.</p>';
+        }
+    }
+
+    /**
+     * Cancels a reservation and refunds credit
+     */
+    async function cancelReservation(cls) {
+        if (!confirm(`¿Estás seguro de cancelar tu lugar en la clase de ${cls.discipline}? Se te devolverá 1 crédito.`)) return;
+
+        try {
+            // 1. Get LATEST class data to ensure we don't corrupt spots
+            const { data: latestClass, error: fetchErr } = await supabase.from('classes').select('*').eq('id', cls.id).single();
+            if (fetchErr) throw fetchErr;
+
+            const occupied = Array.isArray(latestClass.occupied_spots) ? latestClass.occupied_spots : [];
+            const newOccupied = occupied.filter(s => s.userId !== currentUser.id);
+
+            // 2. Update Class
+            const { error: updateErr } = await supabase.from('classes').update({ occupied_spots: newOccupied }).eq('id', cls.id);
+            if (updateErr) throw updateErr;
+
+            // 3. Refund Credit
+            const { data: profile } = await supabase.from('profiles').select('credits').eq('id', currentUser.id).single();
+            await supabase.from('profiles').update({ credits: (profile?.credits || 0) + 1 }).eq('id', currentUser.id);
+
+            showToast('✓ Reserva cancelada. Crédito devuelto.');
+            renderMyReservations();
+            
+            // Re-render calendar UI
+            renderDailyClasses();
+            
+            // Update profile credit display
+            const creditDisp = document.getElementById('profileCreditsCount');
+            if (creditDisp) creditDisp.textContent = (profile?.credits || 0) + 1;
+
+        } catch (err) {
+            console.error("Error canceling reservation:", err);
+            showToast(`Error: ${err.message}`, 'error');
+        }
     }
 
     /* -----------------------------------------------
@@ -912,13 +1034,12 @@ async function syncProfile(user) {
 
         // 1. Process, Filter and Sort classes
         const seenSlots = new Set(); // For de-duplication safety
-        const dayClasses = rawClasses
+        const dayClassesRaw = rawClasses
             .map(cls => {
                 let time = "00:00";
                 let hasValidTime = false;
                 let displayNote = cls.note || "";
 
-                // Handle potential 12:00 AM bug: If no valid [T:HH:mm] prefix, it's considered invalid.
                 if (cls.note && cls.note.startsWith("[T:")) {
                     const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
                     if (match) {
@@ -936,15 +1057,27 @@ async function syncProfile(user) {
 
                 return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm, hasValidTime };
             })
+            .filter(cls => cls.hasValidTime);
+
+        // Sort BEFORE deduplication to ensure reserved classes are chosen first
+        const dayClasses = dayClassesRaw
+            .sort((a, b) => {
+                // Primary Sort: By time
+                if (a.sortVal !== b.sortVal) return a.sortVal - b.sortVal;
+                // Secondary Sort (Safety): Prioritize classes where current user is reserved
+                const aMe = Array.isArray(a.occupied_spots) && a.occupied_spots.some(s => s.userId === currentUser?.id);
+                const bMe = Array.isArray(b.occupied_spots) && b.occupied_spots.some(s => s.userId === currentUser?.id);
+                if (aMe && !bMe) return -1;
+                if (!aMe && bMe) return 1;
+                return 0;
+            })
             .filter(cls => {
-                if (!cls.hasValidTime) return false;
                 const key = `${cls.discipline}_${cls.time}`;
-                if (seenSlots.has(key)) return false; // DEDUPLICATION RULE
+                if (seenSlots.has(key)) return false; 
                 seenSlots.add(key);
                 return true;
             })
-            .filter(cls => activeDisciplineFilter === 'all' || cls.discipline === activeDisciplineFilter)
-            .sort((a, b) => a.sortVal - b.sortVal);
+            .filter(cls => activeDisciplineFilter === 'all' || cls.discipline === activeDisciplineFilter);
 
         // 2. Clear loader and Prepare groups
         dailyClassesList.innerHTML = '';
@@ -1071,25 +1204,36 @@ async function syncProfile(user) {
                 return;
             }
 
-            // 1. UPDATE CLASS SPOTS (Robust JSONB handling)
-            let currentOccupied = [];
-            try {
-                // Ensure currentOccupied is always treatable as an array
-                if (Array.isArray(pendingCls.occupied_spots)) {
-                    currentOccupied = pendingCls.occupied_spots;
-                } else if (typeof pendingCls.occupied_spots === 'string') {
-                    currentOccupied = JSON.parse(pendingCls.occupied_spots);
-                }
-            } catch (e) {
-                console.error("Error parsing occupied_spots", e);
-                currentOccupied = [];
+            // 1. FETCH LATEST CLASS DATA (Prevent race conditions & corruption)
+            const { data: latestClass, error: fetchErr } = await supabase.from('classes').select('*').eq('id', pendingCls.id).single();
+            if (fetchErr || !latestClass) {
+                showToast('Error al obtener datos actualizados de la clase.', 'error');
+                confirmReserveBtn.disabled = false;
+                confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
+                return;
             }
 
-            const normalized = currentOccupied.map(s => {
-                if (typeof s === 'number') return { spot: s, userId: null, displayName: 'Miembro' };
-                return s;
-            });
+            let currentOccupied = [];
+            try {
+                if (Array.isArray(latestClass.occupied_spots)) {
+                    currentOccupied = latestClass.occupied_spots;
+                } else if (typeof latestClass.occupied_spots === 'string') {
+                    currentOccupied = JSON.parse(latestClass.occupied_spots);
+                }
+            } catch (e) { currentOccupied = []; }
+
+            const normalized = currentOccupied.map(s => typeof s === 'number' ? { spot: s, userId: null, displayName: 'Miembro' } : s);
             
+            // Check if spot is already taken by someone else while user was thinking
+            if (normalized.some(s => s.spot === pendingSpot)) {
+                showToast('Este lugar ya fue tomado por otra persona.', 'error');
+                reserveModal.classList.remove('active');
+                confirmReserveBtn.disabled = false;
+                confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
+                renderSpotsGrid(latestClass); // Refresh view
+                return;
+            }
+
             const alreadyBooked = normalized.some(s => s.userId === currentUser.id);
             if (alreadyBooked) {
                 showToast('Ya tienes un lugar reservado en esta clase.', 'error');
@@ -1105,12 +1249,19 @@ async function syncProfile(user) {
             const { data, error } = await supabase.from('classes').update({ occupied_spots: newOccupied }).eq('id', pendingCls.id).select();
 
             if (error) {
-                showToast(`Error: ${error.message}`, 'error');
+                showToast(`Error al guardar: ${error.message}`, 'error');
             } else {
                 // 2. DEDUCT CREDIT
                 await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', currentUser.id);
                 showToast(`✓ ¡Reserva lista! Slot #${pendingSpot}`);
-                renderSpotsGrid(data[0]);
+                
+                // Update profile credit display if open
+                const creditDisp = document.getElementById('profileCreditsCount');
+                if (creditDisp) creditDisp.textContent = profile.credits - 1;
+
+                if (data && data[0]) {
+                    renderSpotsGrid(data[0]);
+                }
                 renderDailyClasses();
             }
 
