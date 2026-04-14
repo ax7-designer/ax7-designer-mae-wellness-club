@@ -1109,19 +1109,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             })
             .filter(cls => cls.hasValidTime);
 
-        // Sort BEFORE deduplication to ensure reserved classes are chosen first
+        // 1.5. Filter out past classes for today (with 10min grace period)
+        const nowChetumal = getChetumalDate();
+        const currentMinutes = nowChetumal.getHours() * 60 + nowChetumal.getMinutes();
+        const todayISO = getISOFromDate(nowChetumal);
+        const GRACE_PERIOD = 10;
+
         const dayClasses = dayClassesRaw
             .sort((a, b) => {
                 // Primary Sort: By time
                 if (a.sortVal !== b.sortVal) return a.sortVal - b.sortVal;
 
                 // Secondary Sort (STABILITY): Ensuring all users see the SAME record for a slot.
-                // If duplicates exist, pick the one with most reservations, then oldest ID.
                 const aCount = Array.isArray(a.occupied_spots) ? a.occupied_spots.length : 0;
                 const bCount = Array.isArray(b.occupied_spots) ? b.occupied_spots.length : 0;
 
-                if (aCount !== bCount) return bCount - aCount; // Most occupied first (prioritizes records with data)
-                return a.id - b.id; // Oldest ID first (stable fallback)
+                if (aCount !== bCount) return bCount - aCount;
+                return a.id - b.id;
             })
             .filter(cls => {
                 const key = `${cls.discipline}_${cls.time}`;
@@ -1129,12 +1133,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 seenSlots.add(key);
                 return true;
             })
-            .filter(cls => activeDisciplineFilter === 'all' || cls.discipline === activeDisciplineFilter);
+            .map(cls => {
+                const isPast = (selectedDateISO === todayISO) && (cls.sortVal < currentMinutes - GRACE_PERIOD);
+                return { ...cls, isPast };
+            })
+            .filter(cls => {
+                // Regular users don't see past classes
+                if (!isAdmin(currentUser) && cls.isPast) return false;
+                
+                // Active discipline filter
+                return activeDisciplineFilter === 'all' || cls.discipline === activeDisciplineFilter;
+            });
 
         // 2. Clear loader and Prepare groups
         dailyClassesList.innerHTML = '';
         if (dayClasses.length === 0) {
-            dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;margin-top:20px;">No hay clases disponibles para estos criterios.</p>`;
+            let emptyMsg = "No hay clases disponibles para estos criterios.";
+            if (selectedDateISO === todayISO && activeDisciplineFilter === 'all') {
+                emptyMsg = "¡Todas las clases de hoy han terminado! Nos vemos mañana para seguir dándolo todo. ✨";
+            }
+            dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;margin-top:20px;padding: 0 20px;line-height:1.5;">${emptyMsg}</p>`;
             return;
         }
 
@@ -1162,7 +1180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const occupied = cls.occupied_spots || [];
             const freeCount = cls.capacity - occupied.length;
             const card = document.createElement('div');
-            card.className = 'daily-class-card';
+            card.className = `daily-class-card ${cls.isPast ? 'past' : ''}`;
             const discIcon = DISCIPLINE_ICONS[cls.discipline] || 'fa-star';
             card.innerHTML = `
                 <div class="daily-class-time-tag">${cls.time12}</div>

@@ -1620,6 +1620,17 @@ button {
     border-color: var(--accent-gold);
 }
 
+.daily-class-card.past {
+    opacity: 0.4;
+    filter: grayscale(0.8);
+    pointer-events: none;
+    border-color: transparent;
+}
+
+.daily-class-card.past .delete-class-btn {
+    pointer-events: auto; /* Allow admin to delete even if past */
+}
+
 .daily-class-info h4 {
     color: var(--text-light);
     font-size: 1.15rem;
