@@ -816,6 +816,12 @@ button {
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid var(--bg-primary);
+    background: linear-gradient(135deg, rgba(201, 169, 110, 0.2), var(--bg-secondary));
+    transition: transform var(--transition-fast);
+}
+
+.coach-img-wrapper:hover .coach-img {
+    transform: scale(1.05);
 }
 
 .coach-name {

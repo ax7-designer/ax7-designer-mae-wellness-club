@@ -34,6 +34,12 @@ const DISCIPLINE_ICONS = {
 
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+const DISCIPLINE_IMAGES = {
+    'Pilates': 'pilates_deseada.jpg',
+    'Train': 'train_deseada.jpg',
+    'Indoor Cycling': 'indoor_deseada.jpg'
+};
+
 /* ============================================================
    STATE
    ============================================================ */
@@ -1011,7 +1017,12 @@ async function syncProfile(user) {
 
     function showClassDetails(cls) {
         selectedClassConfig = cls;
-        if (scCoachImg)       scCoachImg.src = cls.coach_img;
+        // Priority: If discipline image exists, use it to maintain boutique aesthetic
+        const discImg = DISCIPLINE_IMAGES[cls.discipline];
+        if (scCoachImg) {
+            scCoachImg.src = discImg || cls.coach_img || 'MAE LOGO PNG_x.png';
+            scCoachImg.onerror = () => { scCoachImg.src = 'MAE LOGO PNG_x.png'; };
+        }
         if (scCoachName)      scCoachName.textContent = ""; // Oculto por ahora
         if (scCoachDiscipline)scCoachDiscipline.textContent = `${cls.discipline} · ${cls.capacity} Lugares`;
         if (scCoachNote)      scCoachNote.textContent = cls.displayNote ? `"${cls.displayNote}"` : '';
@@ -1060,9 +1071,24 @@ async function syncProfile(user) {
                 return;
             }
 
-            // 1. UPDATE CLASS SPOTS (Legacy logic but with credit check)
-            const currentOccupied = (pendingCls.occupied_spots || []);
-            const normalized = currentOccupied.map(s => typeof s === 'number' ? { spot: s, userId: null, displayName: 'Miembro' } : s);
+            // 1. UPDATE CLASS SPOTS (Robust JSONB handling)
+            let currentOccupied = [];
+            try {
+                // Ensure currentOccupied is always treatable as an array
+                if (Array.isArray(pendingCls.occupied_spots)) {
+                    currentOccupied = pendingCls.occupied_spots;
+                } else if (typeof pendingCls.occupied_spots === 'string') {
+                    currentOccupied = JSON.parse(pendingCls.occupied_spots);
+                }
+            } catch (e) {
+                console.error("Error parsing occupied_spots", e);
+                currentOccupied = [];
+            }
+
+            const normalized = currentOccupied.map(s => {
+                if (typeof s === 'number') return { spot: s, userId: null, displayName: 'Miembro' };
+                return s;
+            });
             
             const alreadyBooked = normalized.some(s => s.userId === currentUser.id);
             if (alreadyBooked) {
