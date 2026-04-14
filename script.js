@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 openModal();
             }
         }
-    }, true); // Use capture phase for maximum priority
+    }, { capture: true, passive: false });
 
     if (btnGoogle) {
         btnGoogle.addEventListener('click', async () => {
@@ -379,7 +379,7 @@ async function syncProfile(user) {
             const avatar    = profile?.avatar   || user.user_metadata?.avatar   || 'bolt';
 
             // Auto-filter by preference if not already set manually
-            if (profile?.preferred_discipline && profile.preferred_discipline !== 'all' && activeDisciplineFilter === 'all') {
+            if (profile?.preferred_discipline && profile.preferred_discipline !== 'all' && (activeDisciplineFilter === 'all' || activeDisciplineFilter === undefined)) {
                 activeDisciplineFilter = profile.preferred_discipline;
                 const filterBtns = document.querySelectorAll('.filter-btn');
                 filterBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.filter === activeDisciplineFilter));
@@ -865,6 +865,8 @@ async function syncProfile(user) {
                 let time = "00:00";
                 let hasValidTime = false;
                 let displayNote = cls.note || "";
+
+                // Handle potential 12:00 AM bug: If no valid [T:HH:mm] prefix, it's considered invalid.
                 if (cls.note && cls.note.startsWith("[T:")) {
                     const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
                     if (match) {
@@ -873,6 +875,7 @@ async function syncProfile(user) {
                         hasValidTime = true;
                     }
                 }
+                
                 const [hh, mm] = time.split(':').map(Number);
                 const hour12 = hh % 12 || 12;
                 const ampm = hh >= 12 ? 'PM' : 'AM';

@@ -1640,6 +1640,40 @@ button {
     margin-bottom: 5px;
 }
 
+/* Hourly block spacer */
+.time-slot-spacer {
+    height: 22px;
+    width: 100%;
+}
+
+/* Session Group (Matutino/Vespertino) Header */
+.session-group-header {
+    margin: 25px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.session-group-header span {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--accent-gold);
+    opacity: 0.9;
+    background: rgba(201, 169, 110, 0.1);
+    padding: 4px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(201, 169, 110, 0.2);
+}
+
+.session-group-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, rgba(201, 169, 110, 0.25), transparent);
+}
+
 /* ==========================================
    PRICING TABS & PANELS
    ========================================== */
