@@ -1070,7 +1070,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const d = new Date(baseDate);
                     if (recurrenceFreq === 'daily') d.setDate(baseDate.getDate() + i);
                     if (recurrenceFreq === 'weekly') d.setDate(baseDate.getDate() + i * 7);
-                    classesToInsert.push({ ...baseClass, date: getISOFromDate(d) });
+                    
+                    const iso = getISOFromDate(d);
+                    const dayNum = d.getDay();
+
+                    // Sunday Protection (Closed)
+                    if (dayNum === 0) continue;
+
+                    // Saturday Restriction (Only 8:00 AM)
+                    let finalNote = note;
+                    if (dayNum === 6) {
+                        finalNote = `[T:08:00]${rawNote}`;
+                    }
+
+                    classesToInsert.push({ ...baseClass, date: iso, note: finalNote });
                 }
             }
 
@@ -1144,7 +1157,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm, hasValidTime };
             })
-            .filter(cls => cls.hasValidTime);
+            .filter(cls => {
+                if (!cls.hasValidTime) return false;
+                const dayNum = d.getDay();
+                // Saturday Guard: Only 8:00 AM
+                if (dayNum === 6 && cls.time !== "08:00") return false;
+                // Sunday Guard: Closed
+                if (dayNum === 0) return false;
+                return true;
+            });
 
         // 1.5. Filter out past classes for today (with 10min grace period)
         const nowChetumal = getChetumalDate();
