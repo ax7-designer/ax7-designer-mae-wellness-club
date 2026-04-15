@@ -406,60 +406,67 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Renders upcoming classes reserved by the current user
      */
     async function renderMyReservations() {
+        if (!currentUser) return;
         const listContainer = document.getElementById('myReservationsList');
-        if (!listContainer || !currentUser) return;
+        if (!listContainer) return;
 
         listContainer.innerHTML = '<p style="text-align:center;color:var(--accent-gold);padding:10px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando tus clases...</p>';
 
         try {
             // Fetch all classes where the user appears in occupied_spots
-            // We fetch future or current classes (optional: we can just fetch all and filter in JS)
             const { data, error } = await supabase
                 .from('classes')
                 .select('*')
                 .filter('occupied_spots', 'cs', JSON.stringify([{ userId: currentUser.id }]));
 
             if (error) throw error;
+            
+            // Filter out past classes for display
+            const now = getChetumalDate();
+            const todayISO = getISOFromDate(now);
+            const currentMin = now.getHours() * 60 + now.getMinutes();
 
-            if (!data || data.length === 0) {
-                listContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; font-style: italic; padding: 10px;">No tienes clases reservadas aún.</p>';
+            const active = (data || []).filter(cls => {
+                let time = "00:00";
+                if (cls.note?.includes("[T:")) {
+                    const m = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
+                    if (m) time = m[1];
+                }
+                const [hh, mm] = time.split(':').map(Number);
+                const sortVal = hh * 60 + mm;
+                if (cls.date < todayISO) return false;
+                if (cls.date === todayISO && sortVal < currentMin - 10) return false;
+                return true;
+            });
+
+            if (active.length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; font-style: italic; padding: 10px;">No tienes clases próximas.</p>';
                 return;
             }
 
-            // Sort by date and time
-            const sorted = data.map(cls => {
+            // Sort and Render
+            active.sort((a,b) => a.date.localeCompare(b.date)).forEach(cls => {
+                // ... (rendering logic remains similar but cleaned up)
                 let time = "00:00";
-                if (cls.note && cls.note.startsWith("[T:")) {
-                    const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
-                    if (match) time = match[1];
+                if (cls.note?.includes("[T:")) {
+                    const m = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
+                    if (m) time = m[1];
                 }
                 const [hh, mm] = time.split(':').map(Number);
-                const hour12 = hh % 12 || 12;
-                const ampm = hh >= 12 ? 'PM' : 'AM';
-                const time12 = `${hour12}:${String(mm).padStart(2, '0')} ${ampm}`;
-                // Using 12:00:00 to avoid timezone shifts during sorting
-                return { ...cls, time, time12, sortVal: new Date(cls.date + 'T12:00:00').getTime() + (hh * 60 + mm) * 60000 };
-            }).sort((a, b) => a.sortVal - b.sortVal);
-
-            listContainer.innerHTML = '';
-            sorted.forEach(cls => {
-                const item = document.createElement('div');
-                item.className = 'reservation-item';
-
-                // Find user's spot number
-                const spots = Array.isArray(cls.occupied_spots) ? cls.occupied_spots : [];
-                const mySpot = spots.find(s => s.userId === currentUser.id)?.spot || '?';
-
-                // Format date nicely
+                const time12 = `${hh % 12 || 12}:${String(mm).padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`;
                 const dateObj = new Date(cls.date + 'T12:00:00');
                 const dateStr = `${DAYS_ES[dateObj.getDay()]} ${dateObj.getDate()}`;
+                
+                const item = document.createElement('div');
+                item.className = 'reservation-item';
+                const mySpot = cls.occupied_spots.find(s => s.userId === currentUser.id)?.spot || '?';
 
                 item.innerHTML = `
                     <div class="res-info">
                         <div class="res-discipline">${cls.discipline}</div>
                         <div class="res-time-date">
                             <i class="fa-regular fa-calendar"></i> ${dateStr} 
-                            <i class="fa-regular fa-clock" style="margin-left:5px;"></i> ${cls.time12}
+                            <i class="fa-regular fa-clock" style="margin-left:5px;"></i> ${time12}
                         </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:12px;">
@@ -467,59 +474,69 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="reservation-cancel-btn" title="Cancelar Reserva">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
-                    </div>
-                `;
-
-                const cancelBtn = item.querySelector('.reservation-cancel-btn');
-                cancelBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    cancelReservation(cls);
-                });
-
+                    </div>`;
+                
+                item.querySelector('.reservation-cancel-btn').onclick = () => cancelReservation(cls);
                 listContainer.appendChild(item);
             });
-
         } catch (err) {
-            console.error("Error rendering reservations:", err);
             listContainer.innerHTML = '<p style="text-align:center;color:#e63946;font-size:0.8rem;">Error al cargar reservas.</p>';
         }
     }
 
     /**
-     * Cancels a reservation and refunds credit
+     * ATOMIC Cancellation using RPC
      */
     async function cancelReservation(cls) {
         if (!confirm(`¿Estás seguro de cancelar tu lugar en la clase de ${cls.discipline}? Se te devolverá 1 crédito.`)) return;
 
         try {
-            // 1. Get LATEST class data to ensure we don't corrupt spots
-            const { data: latestClass, error: fetchErr } = await supabase.from('classes').select('*').eq('id', cls.id).single();
-            if (fetchErr) throw fetchErr;
+            const { error } = await supabase.rpc('cancel_reservation_v2', {
+                p_class_id: cls.id,
+                p_user_id: currentUser.id,
+                p_spot: 0 // Not strictly needed by the RPC logic but kept for param safety if needed
+            });
 
-            const occupied = Array.isArray(latestClass.occupied_spots) ? latestClass.occupied_spots : [];
-            const newOccupied = occupied.filter(s => s.userId !== currentUser.id);
-
-            // 2. Update Class
-            const { error: updateErr } = await supabase.from('classes').update({ occupied_spots: newOccupied }).eq('id', cls.id);
-            if (updateErr) throw updateErr;
-
-            // 3. Refund Credit
-            const { data: profile } = await supabase.from('profiles').select('credits').eq('id', currentUser.id).single();
-            await supabase.from('profiles').update({ credits: (profile?.credits || 0) + 1 }).eq('id', currentUser.id);
+            if (error) throw error;
 
             showToast('✓ Reserva cancelada. Crédito devuelto.');
             renderMyReservations();
-
-            // Re-render calendar UI
             renderDailyClasses();
-
-            // Update profile credit display
-            const creditDisp = document.getElementById('profileCreditsCount');
-            if (creditDisp) creditDisp.textContent = (profile?.credits || 0) + 1;
+            
+            // Sync credits in UI
+            const { data: prof } = await supabase.from('profiles').select('credits').eq('id', currentUser.id).single();
+            if (prof && document.getElementById('profileCreditsCount')) {
+                document.getElementById('profileCreditsCount').textContent = prof.credits;
+            }
 
         } catch (err) {
             console.error("Error canceling reservation:", err);
             showToast(`Error: ${err.message}`, 'error');
+        }
+    }
+
+    /**
+     * AUTO-CLEANUP: Removes classes older than 24 hours
+     */
+    async function performAutoCleanup() {
+        if (!isAdmin(currentUser)) return;
+        const yesterday = new Date(getChetumalDate());
+        yesterday.setDate(yesterday.getDate() - 1);
+        const isoLimit = getISOFromDate(yesterday);
+
+        console.log("Running Cleanup for dates <", isoLimit);
+        
+        const { count, error } = await supabase
+            .from('classes')
+            .delete({ count: 'exact' })
+            .lt('date', isoLimit);
+
+        if (error) {
+            console.warn("Cleanup error:", error);
+        } else if (count > 0) {
+            console.log(`✓ Cleanup: Removed ${count} old classes.`);
+            // Only show toast if a significant amount was cleaned? 
+            // Or just keep it silent in console for less annoyance.
         }
     }
 
@@ -588,6 +605,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showToast(isAdmin(session.user) ? '🛡️ Modo Admin activado' : '¡Bienvenido/a a Team Mae!', 'info');
                 syncProfile(session.user);
                 closeModalFunc();
+                // Trigger auto-cleanup if admin
+                if (isAdmin(session.user)) performAutoCleanup();
             }
             if (event === 'PASSWORD_RECOVERY') {
                 const resetModal = document.getElementById('resetPasswordModal');
@@ -1283,81 +1302,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             confirmReserveBtn.disabled = true;
             confirmReserveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-            // 0. CHECK CREDITS (Option A)
-            const { data: profile } = await supabase.from('profiles').select('credits').eq('id', currentUser.id).single();
-            if (!profile || profile.credits <= 0) {
-                showToast('No tienes clases disponibles. Por favor adquiere un plan.', 'error');
-                reserveModal.classList.remove('active');
-                confirmReserveBtn.disabled = false;
-                confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
-                return;
-            }
-
-            // 1. FETCH LATEST CLASS DATA (Prevent race conditions & corruption)
-            const { data: latestClass, error: fetchErr } = await supabase.from('classes').select('*').eq('id', pendingCls.id).single();
-            if (fetchErr || !latestClass) {
-                showToast('Error al obtener datos actualizados de la clase.', 'error');
-                confirmReserveBtn.disabled = false;
-                confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
-                return;
-            }
-
-            let currentOccupied = [];
             try {
-                if (Array.isArray(latestClass.occupied_spots)) {
-                    currentOccupied = latestClass.occupied_spots;
-                } else if (typeof latestClass.occupied_spots === 'string') {
-                    currentOccupied = JSON.parse(latestClass.occupied_spots);
+                // ATOMIC RESERVATION via RPC
+                const spotData = { spot: pendingSpot, userId: currentUser.id, displayName };
+                const { error } = await supabase.rpc('reserve_spot_v2', {
+                    p_class_id: pendingCls.id,
+                    p_user_id: currentUser.id,
+                    p_spot_data: spotData
+                });
+
+                if (error) {
+                    if (error.message.includes('ocupado')) throw new Error('Este lugar ya fue tomado por otra persona.');
+                    if (error.message.includes('créditos')) throw new Error('No tienes clases disponibles. Por favor adquiere un plan.');
+                    throw error;
                 }
-            } catch (e) { currentOccupied = []; }
 
-            const normalized = currentOccupied.map(s => typeof s === 'number' ? { spot: s, userId: null, displayName: 'Miembro' } : s);
+                showToast(`✓ ¡Reserva lista! Lugar #${pendingSpot}`);
 
-            // Check if spot is already taken by someone else while user was thinking
-            if (normalized.some(s => s.spot === pendingSpot)) {
-                showToast('Este lugar ya fue tomado por otra persona.', 'error');
-                reserveModal.classList.remove('active');
-                confirmReserveBtn.disabled = false;
-                confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
-                renderSpotsGrid(latestClass); // Refresh view
-                return;
-            }
-
-            const alreadyBooked = normalized.some(s => s.userId === currentUser.id);
-            if (alreadyBooked) {
-                showToast('Ya tienes un lugar reservado en esta clase.', 'error');
-                reserveModal.classList.remove('active');
-                confirmReserveBtn.disabled = false;
-                confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
-                return;
-            }
-
-            const newEntry = { spot: pendingSpot, userId: currentUser.id, displayName };
-            const newOccupied = [...normalized, newEntry];
-
-            const { data, error } = await supabase.from('classes').update({ occupied_spots: newOccupied }).eq('id', pendingCls.id).select();
-
-            if (error) {
-                showToast(`Error al guardar: ${error.message}`, 'error');
-            } else {
-                // 2. DEDUCT CREDIT
-                await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', currentUser.id);
-                showToast(`✓ ¡Reserva lista! Slot #${pendingSpot}`);
-
-                // Update profile credit display if open
-                const creditDisp = document.getElementById('profileCreditsCount');
-                if (creditDisp) creditDisp.textContent = profile.credits - 1;
-
-                if (data && data[0]) {
-                    renderSpotsGrid(data[0]);
+                // Sync credits in UI if open
+                const { data: prof } = await supabase.from('profiles').select('credits').eq('id', currentUser.id).single();
+                if (prof && document.getElementById('profileCreditsCount')) {
+                    document.getElementById('profileCreditsCount').textContent = prof.credits;
                 }
+
                 renderDailyClasses();
-            }
+                reserveModal.classList.remove('active');
 
-            reserveModal.classList.remove('active');
-            confirmReserveBtn.disabled = false;
-            confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
-            pendingSpot = null; pendingCls = null;
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                confirmReserveBtn.disabled = false;
+                confirmReserveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
+                pendingSpot = null; pendingCls = null;
+            }
         });
     }
 

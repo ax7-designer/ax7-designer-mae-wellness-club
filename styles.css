@@ -489,10 +489,34 @@ button {
     color: var(--text-muted);
 }
 
+/* GPU Accelerated animations */
 .scroll-arrow {
     color: var(--accent-gold);
     font-size: 0.9rem;
     animation: arrowBounce 1.6s ease-in-out infinite;
+    will-change: transform;
+}
+
+/* Optimized Glassmorphism for Modals */
+.modal-content {
+    background: rgba(26, 24, 21, 0.85);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(201, 169, 110, 0.2);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    border-radius: 20px;
+    padding: 40px;
+    position: relative;
+    max-width: 500px;
+    width: 90%;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0);
+    opacity: 1;
 }
 
 /* Floating particles */
@@ -1604,20 +1628,29 @@ button {
 }
 
 .daily-class-card {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(32, 30, 27, 0.45);
+    backdrop-filter: blur(4px);
     border: 1px solid var(--border-secondary);
-    border-radius: 8px;
-    padding: 16px 20px;
+    border-radius: 12px;
+    padding: 18px 22px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, background 0.3s ease;
+    will-change: transform;
 }
 
-.daily-class-card:hover, .daily-class-card.active {
-    background: rgba(201, 169, 110, 0.08);
+.daily-class-card:hover {
+    transform: translateX(6px);
+    background: rgba(201, 169, 110, 0.05);
     border-color: var(--accent-gold);
+}
+
+.daily-class-card.active {
+    background: rgba(201, 169, 110, 0.12);
+    border-color: var(--accent-gold);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 0 15px rgba(201, 169, 110, 0.15);
 }
 
 .daily-class-card.past {
