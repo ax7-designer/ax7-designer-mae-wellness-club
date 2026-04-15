@@ -571,10 +571,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (addAdminClassBtn) addAdminClassBtn.style.display = isAdmin(user) ? 'inline-flex' : 'none';
             if (addInactiveDayBtn) addInactiveDayBtn.style.display = isAdmin(user) ? 'inline-flex' : 'none';
+
+            // ATTACH ID TO STRIPE LINKS
+            const stripeLinks = document.querySelectorAll('a[href^="https://buy.stripe.com/"]');
+            stripeLinks.forEach(link => {
+                const url = new URL(link.href);
+                url.searchParams.set('client_reference_id', user.id);
+                url.searchParams.set('prefilled_email', user.email);
+                link.href = url.toString();
+            });
         } else {
             loginBtn.innerHTML = `<i class="fa-regular fa-user"></i> <span class="action-text">Iniciar Sesión</span>`;
             if (addAdminClassBtn) addAdminClassBtn.style.display = 'none';
             if (addInactiveDayBtn) addInactiveDayBtn.style.display = 'none';
+            
+            // CLEAN ID FROM STRIPE LINKS
+            const stripeLinks = document.querySelectorAll('a[href^="https://buy.stripe.com/"]');
+            stripeLinks.forEach(link => {
+                const url = new URL(link.href);
+                url.searchParams.delete('client_reference_id');
+                url.searchParams.delete('prefilled_email');
+                link.href = url.toString();
+            });
         }
     }
 

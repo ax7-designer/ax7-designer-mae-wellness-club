@@ -71,3 +71,15 @@ BEGIN
   WHERE email_fallback ILIKE target_email;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 4. Function to add credits by ID (Webhook utility)
+CREATE OR REPLACE FUNCTION add_credits_by_id_v2(
+  p_user_id UUID,
+  p_amount INT
+) RETURNS VOID AS $$
+BEGIN
+  UPDATE profiles 
+  SET credits = credits + p_amount 
+  WHERE id = p_user_id;
+END;
+$$ LANGUAGE plpgsql;
