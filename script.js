@@ -363,30 +363,117 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    /* --- Admin: Manual Credit Assignment --- */
+    /* --- Admin: Manual Credit Assignment — 2-Step Secure Flow --- */
     const adminAddCreditsBtn = document.getElementById('adminAddCreditsBtn');
+    const adminSearchUserBtn = document.getElementById('adminSearchUserBtn');
+    const adminCreditPreview = document.getElementById('adminCreditPreview');
+    let adminTargetUser = null; // Holds the found user profile before committing
+
+    // STEP 1: Search user by email before any credit assignment
+    if (adminSearchUserBtn) {
+        adminSearchUserBtn.addEventListener('click', async () => {
+            const email = document.getElementById('adminTargetEmail').value.trim();
+            if (!email) return showToast('Ingresa un email válido', 'error');
+
+            adminSearchUserBtn.disabled = true;
+            adminSearchUserBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('id, email_fallback, credits, full_name, nickname, avatar, updated_at')
+                .ilike('email_fallback', email)
+                .single();
+
+            adminSearchUserBtn.disabled = false;
+            adminSearchUserBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Buscar';
+
+            if (error || !profile) {
+                adminTargetUser = null;
+                if (adminCreditPreview) adminCreditPreview.innerHTML = `
+                    <div style="color:#e63946; font-size:0.82rem; padding:10px 14px; border-radius:8px; background:rgba(230,57,70,0.08); border:1px solid rgba(230,57,70,0.2); display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        Usuario no encontrado con ese email.
+                    </div>`;
+                return;
+            }
+
+            adminTargetUser = profile;
+            const displayName = profile.full_name || profile.nickname || profile.email_fallback;
+            const lastUpdate = profile.updated_at
+                ? new Date(profile.updated_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' })
+                : 'N/A';
+
+            if (adminCreditPreview) {
+                adminCreditPreview.innerHTML = `
+                    <div style="background:rgba(42,157,143,0.07); border:1px solid rgba(42,157,143,0.25); border-radius:10px; padding:14px; font-size:0.83rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:7px;">
+                            <span style="color:var(--text-muted);">Usuario:</span>
+                            <span style="color:#fff; font-weight:600;">${displayName}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:7px;">
+                            <span style="color:var(--text-muted);">Email:</span>
+                            <span style="color:#ccc; font-size:0.8rem;">${profile.email_fallback}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:7px;">
+                            <span style="color:var(--text-muted);">Saldo actual:</span>
+                            <span style="color:#2a9d8f; font-weight:800; font-size:1.1rem;">${profile.credits} clases</span>
+                        </div>
+                        <div style="color:var(--text-muted); font-size:0.75rem; margin-top:4px;">
+                            <i class="fa-regular fa-clock" style="margin-right:4px;"></i>Última actualización: ${lastUpdate}
+                        </div>
+                    </div>`;
+            }
+        });
+    }
+
+    // STEP 2: Confirm credit assignment with audit trail
     if (adminAddCreditsBtn) {
         adminAddCreditsBtn.addEventListener('click', async () => {
-            const email = document.getElementById('adminTargetEmail').value.trim();
+            if (!adminTargetUser) {
+                return showToast('Primero busca al usuario con el botón Buscar', 'error');
+            }
+
             const amount = parseInt(document.getElementById('adminCreditAmount').value);
-            if (!email || isNaN(amount)) return showToast('Email y cantidad requeridos', 'error');
+            const notes = document.getElementById('adminCreditNotes')?.value?.trim() || '';
+
+            if (isNaN(amount) || amount <= 0) {
+                return showToast('Ingresa una cantidad válida (mayor a 0)', 'error');
+            }
+
+            const displayName = adminTargetUser.full_name || adminTargetUser.nickname || adminTargetUser.email_fallback;
+            const confirmed = confirm(
+                `¿Confirmas asignar ${amount} crédito(s)?\n\n` +
+                `Cliente: ${displayName}\n` +
+                `Saldo actual: ${adminTargetUser.credits} clases\n` +
+                `Saldo después: ${adminTargetUser.credits + amount} clases`
+            );
+            if (!confirmed) return;
 
             adminAddCreditsBtn.disabled = true;
+            adminAddCreditsBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
 
-            // 1. Find user ID by email (This is usually blocked by RLS/Security unless we have a specific endpoint or logic)
-            // Simplified: We use a RPC or we assume the admin knows the ID? 
-            // Better: We match by email in a custom 'usage_ledger' or similar if possible.
-            // For now, if we don't have a 'search user' endpoint, let's use the provided email to filter public profiles.
-            const { data: targetProfile, error: searchError } = await supabase.from('profiles').select('id, credits').ilike('email_fallback', email).single();
-            // Note: I'll need to add email_fallback to the SQL later or use auth metadata search.
+            // Call the refactored RPC — now returns rich JSON and writes to credit_ledger
+            const { data, error } = await supabase.rpc('add_credits_by_email', {
+                target_email: adminTargetUser.email_fallback,
+                amount: amount,
+                p_admin_id: currentUser.id,
+                p_notes: notes || `Asignación manual — ${new Date().toLocaleDateString('es-MX')}`
+            });
 
-            // Codeforcing workaround: Update by email directly if the table has it
-            const { error } = await supabase.rpc('add_credits_by_email', { target_email: email, amount: amount });
-
-            if (error) showToast(`Error: ${error.message}`, 'error');
-            else showToast(`✓ Se añadieron ${amount} clases a ${email}`);
+            if (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            } else {
+                showToast(`✓ ${amount} clase(s) asignadas. Nuevo saldo: ${data.new_balance}`, 'success');
+                // Reset form state
+                document.getElementById('adminTargetEmail').value = '';
+                document.getElementById('adminCreditAmount').value = '';
+                if (document.getElementById('adminCreditNotes')) document.getElementById('adminCreditNotes').value = '';
+                adminTargetUser = null;
+                if (adminCreditPreview) adminCreditPreview.innerHTML = '';
+            }
 
             adminAddCreditsBtn.disabled = false;
+            adminAddCreditsBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Asignar Créditos';
         });
     }
 
@@ -1251,7 +1338,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="daily-class-meta">
                     <span class="spots-badge">${freeCount} lugares libres</span>
-                    ${isAdmin(currentUser) ? '<button class="delete-class-btn" style="background:none; border:none; color:#e63946; cursor:pointer; padding:5px; margin-left:10px;"><i class="fa-solid fa-trash-can"></i></button>' : ''}
+                    ${isAdmin(currentUser) ? `
+                        <button class="roster-btn" title="Pase de lista" style="background:rgba(201,169,110,0.12); border:1px solid rgba(201,169,110,0.3); color:var(--accent-gold); cursor:pointer; padding:5px 10px; border-radius:6px; margin-left:6px; font-size:0.75rem;">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                        </button>
+                        <button class="delete-class-btn" title="Eliminar clase" style="background:none; border:none; color:#e63946; cursor:pointer; padding:5px; margin-left:4px;">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>` : ''}
                     <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:0.8rem; margin-left:10px;"></i>
                 </div>`;
 
@@ -1264,6 +1357,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (error) showToast(`Error al eliminar: ${error.message}`, 'error');
                         else { showToast('✓ Clase eliminada'); renderDailyClasses(); }
                     }
+                });
+            }
+
+            const rosterBtn = card.querySelector('.roster-btn');
+            if (rosterBtn) {
+                rosterBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showRosterModal(cls);
                 });
             }
 
@@ -1429,6 +1530,169 @@ document.addEventListener('DOMContentLoaded', async () => {
             spotsGrid.appendChild(spotDiv);
         }
     };
+
+    /* -----------------------------------------------
+       13. ADMIN ROSTER MODAL — Physical Check-in
+    ----------------------------------------------- */
+    async function showRosterModal(cls) {
+        if (!isAdmin(currentUser)) return;
+
+        // Create the modal once and reuse
+        let rosterModal = document.getElementById('rosterModal');
+        if (!rosterModal) {
+            rosterModal = document.createElement('div');
+            rosterModal.id = 'rosterModal';
+            rosterModal.className = 'modal-overlay';
+            rosterModal.innerHTML = `
+                <div class="modal-content" style="max-width:520px; max-height:85vh; overflow-y:auto;">
+                    <button class="close-btn" id="closeRosterModal" aria-label="Cerrar roster">&times;</button>
+                    <div class="modal-header" style="padding-bottom:12px;">
+                        <i class="fa-solid fa-clipboard-list" style="font-size:2rem; color:var(--accent-gold); margin-bottom:8px;"></i>
+                        <h2 id="rosterTitle">Pase de Lista</h2>
+                        <p id="rosterSubtitle" style="color:var(--text-muted);"></p>
+                    </div>
+                    <div id="rosterContent"></div>
+                </div>`;
+            document.body.appendChild(rosterModal);
+
+            document.getElementById('closeRosterModal').addEventListener('click', () => {
+                rosterModal.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            });
+            rosterModal.addEventListener('click', (e) => {
+                if (e.target === rosterModal) {
+                    rosterModal.classList.remove('active');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        }
+
+        // Set title
+        const titleEl = document.getElementById('rosterTitle');
+        const subtitleEl = document.getElementById('rosterSubtitle');
+        if (titleEl) titleEl.textContent = `${cls.discipline} — Pase de Lista`;
+        if (subtitleEl) subtitleEl.textContent = `${cls.time12} · ${cls.date}`;
+
+        const content = document.getElementById('rosterContent');
+        content.innerHTML = '<p style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin" style="color:var(--accent-gold);"></i> Cargando asistentes...</p>';
+
+        rosterModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Fetch fresh class data + existing attendance records in parallel
+        const [{ data: classData }, { data: attendance }] = await Promise.all([
+            supabase.from('classes').select('occupied_spots, capacity').eq('id', cls.id).single(),
+            supabase.from('class_attendance').select('*').eq('class_id', cls.id)
+        ]);
+
+        const spots = classData?.occupied_spots || [];
+        const attendanceMap = {};
+        (attendance || []).forEach(a => { attendanceMap[a.user_id] = a.status; });
+
+        if (spots.length === 0) {
+            content.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px; font-style:italic;">Sin reservas para esta clase.</p>';
+            return;
+        }
+
+        // Fetch profiles for all attendees in one query
+        const userIds = spots.map(s => s.userId).filter(Boolean);
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, nickname, email_fallback')
+            .in('id', userIds);
+
+        const profileMap = {};
+        (profiles || []).forEach(p => { profileMap[p.id] = p; });
+
+        const statusColors = { reserved: '#c8a96e', attended: '#2a9d8f', no_show: '#e63946' };
+        const statusIcons  = { reserved: 'fa-clock', attended: 'fa-circle-check', no_show: 'fa-circle-xmark' };
+        const statusLabels = { reserved: 'Pendiente', attended: 'Asistió ✓', no_show: 'Falta' };
+
+        // Summary bar
+        const attendedCount = Object.values(attendanceMap).filter(s => s === 'attended').length;
+        const noShowCount   = Object.values(attendanceMap).filter(s => s === 'no_show').length;
+        const pendingCount  = spots.length - attendedCount - noShowCount;
+
+        let html = `
+            <div style="display:flex; gap:8px; margin:0 16px 16px; flex-wrap:wrap;">
+                <span style="flex:1; text-align:center; padding:8px; border-radius:8px; background:rgba(42,157,143,0.1); font-size:0.8rem; color:#2a9d8f; font-weight:600;">
+                    <i class="fa-solid fa-circle-check"></i> ${attendedCount} Asistieron
+                </span>
+                <span style="flex:1; text-align:center; padding:8px; border-radius:8px; background:rgba(230,57,70,0.08); font-size:0.8rem; color:#e63946; font-weight:600;">
+                    <i class="fa-solid fa-circle-xmark"></i> ${noShowCount} Falta(s)
+                </span>
+                <span style="flex:1; text-align:center; padding:8px; border-radius:8px; background:rgba(201,169,110,0.08); font-size:0.8rem; color:var(--accent-gold); font-weight:600;">
+                    <i class="fa-regular fa-clock"></i> ${pendingCount} Pendiente(s)
+                </span>
+            </div>`;
+
+        spots.forEach(spot => {
+            const profile = profileMap[spot.userId] || {};
+            const displayName = profile.full_name || profile.nickname || spot.displayName || 'Miembro';
+            const email = profile.email_fallback || '';
+            const status = attendanceMap[spot.userId] || 'reserved';
+
+            html += `
+                <div class="roster-item" style="display:flex; align-items:center; justify-content:space-between;
+                    padding:12px 16px; margin:0 8px 8px; background:rgba(255,255,255,0.04);
+                    border-radius:10px; border:1px solid rgba(255,255,255,0.07);">
+                    <div style="min-width:0;">
+                        <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            #${spot.spot} — ${displayName}
+                        </div>
+                        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">${email}</div>
+                    </div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-left:10px;">
+                        <span style="color:${statusColors[status]}; font-size:0.72rem; font-weight:600;
+                            background:${statusColors[status]}18; padding:3px 9px; border-radius:20px; white-space:nowrap;">
+                            <i class="fa-solid ${statusIcons[status]}"></i> ${statusLabels[status]}
+                        </span>
+                        ${status !== 'attended' ? `
+                            <button class="roster-mark-btn" data-uid="${spot.userId}" data-status="attended"
+                                title="Marcar como Asistió"
+                                style="background:rgba(42,157,143,0.15); border:1px solid rgba(42,157,143,0.3);
+                                    color:#2a9d8f; padding:6px 10px; border-radius:7px; cursor:pointer; font-size:0.8rem;">
+                                <i class="fa-solid fa-check"></i>
+                            </button>` : ''}
+                        ${status !== 'no_show' ? `
+                            <button class="roster-mark-btn" data-uid="${spot.userId}" data-status="no_show"
+                                title="Marcar como Falta"
+                                style="background:rgba(230,57,70,0.1); border:1px solid rgba(230,57,70,0.25);
+                                    color:#e63946; padding:6px 10px; border-radius:7px; cursor:pointer; font-size:0.8rem;">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>` : ''}
+                    </div>
+                </div>`;
+        });
+
+        content.innerHTML = html;
+
+        // Attach event listeners to mark buttons
+        content.querySelectorAll('.roster-mark-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const uid    = btn.dataset.uid;
+                const status = btn.dataset.status;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+                const { error } = await supabase.rpc('mark_attendance', {
+                    p_class_id: cls.id,
+                    p_user_id:  uid,
+                    p_status:   status,
+                    p_admin_id: currentUser.id
+                });
+
+                if (error) {
+                    showToast(`Error: ${error.message}`, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = status === 'attended' ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-xmark"></i>';
+                } else {
+                    showToast(`✓ Asistencia actualizada`);
+                    showRosterModal(cls); // Re-render with fresh data
+                }
+            });
+        });
+    }
 
     renderDailyClasses();
 
