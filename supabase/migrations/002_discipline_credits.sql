@@ -2,17 +2,17 @@
 -- MAE WELLNESS CLUB — MIGRATION 002
 -- Sistema de Créditos por Disciplina + Vista de Usuarios (Admin)
 --
--- FILOSOFÍA:
---   · credits_indoor  → solo para Indoor Cycling
---   · credits_train   → solo para Train
---   · credits_pilates → solo para Pilates
---   · credits_open    → VIP comodín (vale para cualquier disciplina)
---   · credits         → ALIAS de solo lectura = SUM de todos (backward compat)
+-- FILOSOFÍA DE CRÉDITOS:
+--   · credits_indoor  → solo para Indoor Cycling (AISLADO)
+--   · credits_pilates → pool compartido Pilates + Train (mismo paquete Stripe)
+--   · credits_train   → reservado para asignación manual individual de Train
+--   · credits_open    → VIP comodín (vale para CUALQUIER disciplina)
+--   · credits         → ALIAS suma total (backward compat, manejado por trigger)
 --
 -- ORDEN DE CONSUMO EN reserve_spot_v2:
---   1. Crédito específico de la disciplina (si > 0)
---   2. Crédito open/VIP (si > 0)
---   3. Si ambos = 0 → EXCEPTION
+--   Indoor Cycling: credits_indoor → credits_open → ERROR
+--   Train:          credits_train  → credits_pilates → credits_open → ERROR
+--   Pilates:        credits_pilates → credits_train  → credits_open → ERROR
 -- ============================================================
 
 -- ============================================================
@@ -140,20 +140,13 @@ BEGIN
       END IF;
 
     WHEN 'Train' THEN
+      -- Train y Pilates comparten el pool 'pilates' (mismo paquete Stripe pte_*)
+      -- Prioridad: credits_train (manual) → credits_pilates (pool compartido) → credits_open (VIP)
       IF v_credits_train > 0 THEN
         v_credit_col  := 'train';
         v_old_credits := v_credits_train;
         v_new_credits := v_credits_train - 1;
-      ELSIF v_credits_open > 0 THEN
-        v_credit_col  := 'open';
-        v_old_credits := v_credits_open;
-        v_new_credits := v_credits_open - 1;
-      ELSE
-        RAISE EXCEPTION 'Sin créditos para Train. Adquiere un plan de Train/Pilates o una Membresía VIP.';
-      END IF;
-
-    WHEN 'Pilates' THEN
-      IF v_credits_pilates > 0 THEN
+      ELSIF v_credits_pilates > 0 THEN
         v_credit_col  := 'pilates';
         v_old_credits := v_credits_pilates;
         v_new_credits := v_credits_pilates - 1;
@@ -162,7 +155,26 @@ BEGIN
         v_old_credits := v_credits_open;
         v_new_credits := v_credits_open - 1;
       ELSE
-        RAISE EXCEPTION 'Sin créditos para Pilates. Adquiere un plan de Train/Pilates o una Membresía VIP.';
+        RAISE EXCEPTION 'Sin créditos para Train. Adquiere un plan de Pilates/Train o una Membresía VIP.';
+      END IF;
+
+    WHEN 'Pilates' THEN
+      -- Pilates y Train comparten el pool 'pilates' (mismo paquete Stripe pte_*)
+      -- Prioridad: credits_pilates (pool compartido) → credits_train (manual) → credits_open (VIP)
+      IF v_credits_pilates > 0 THEN
+        v_credit_col  := 'pilates';
+        v_old_credits := v_credits_pilates;
+        v_new_credits := v_credits_pilates - 1;
+      ELSIF v_credits_train > 0 THEN
+        v_credit_col  := 'train';
+        v_old_credits := v_credits_train;
+        v_new_credits := v_credits_train - 1;
+      ELSIF v_credits_open > 0 THEN
+        v_credit_col  := 'open';
+        v_old_credits := v_credits_open;
+        v_new_credits := v_credits_open - 1;
+      ELSE
+        RAISE EXCEPTION 'Sin créditos para Pilates. Adquiere un plan de Pilates/Train o una Membresía VIP.';
       END IF;
 
     ELSE
@@ -484,77 +496,121 @@ $$;
 GRANT EXECUTE ON FUNCTION add_credits_by_id_v2(UUID, INT, TEXT, TEXT) TO service_role;
 
 -- ============================================================
--- BLOQUE 7: REPARACIÓN de sira.armas@gmail.com
--- Ejecutar SOLO DESPUÉS de verificar en el SELECT que no
--- tiene reserva activa de Indoor Cycling 20-21 Abril 2026
+-- BLOQUE 7: REPARACIÓN INMEDIATA — sira.armas@gmail.com
+-- Tenía 5 créditos, bug le dejó 4. Se repone 1 crédito indoor.
+-- Este bloque se ejecuta automáticamente al correr la migración.
 -- ============================================================
 
--- 7a. Diagnóstico — Ejecuta primero:
-/*
-SELECT
-  p.id,
-  p.email_fallback,
-  p.credits,
-  p.credits_open,
-  p.credits_indoor,
-  p.credits_train,
-  p.credits_pilates,
-  p.full_name,
-  p.nickname,
-  p.created_at
-FROM profiles p
-WHERE p.email_fallback ILIKE 'sira.armas@gmail.com';
-*/
+-- 7a. Verificar el estado actual primero (diagnóstico no destructivo)
+DO $$
+DECLARE
+  v_user_id   UUID;
+  v_credits   INT;
+  v_indoor    INT;
+  v_open      INT;
+BEGIN
+  SELECT id, credits, credits_indoor, credits_open
+  INTO v_user_id, v_credits, v_indoor, v_open
+  FROM profiles
+  WHERE email_fallback ILIKE 'sira.armas@gmail.com';
 
--- 7b. Ver ledger de transacciones recientes:
-/*
-SELECT
-  cl.id,
-  cl.transaction_type,
-  cl.amount,
-  cl.credit_type,
-  cl.previous_balance,
-  cl.new_balance,
-  cl.reference_id,
-  cl.notes,
-  cl.created_at
-FROM credit_ledger cl
-WHERE cl.user_id = (
-  SELECT id FROM profiles WHERE email_fallback ILIKE 'sira.armas@gmail.com'
-)
-ORDER BY cl.created_at DESC
-LIMIT 15;
-*/
+  IF NOT FOUND THEN
+    RAISE NOTICE 'AVISO: sira.armas@gmail.com no encontrada en profiles. Verificar email.';
+  ELSE
+    RAISE NOTICE 'Diagnóstico sira.armas — ID: %, credits: %, credits_indoor: %, credits_open: %',
+      v_user_id, v_credits, v_indoor, v_open;
+  END IF;
+END;
+$$;
 
--- 7c. Ver si tiene reserva activa de Indoor Cycling:
-/*
-SELECT
-  c.id,
-  c.discipline,
-  c.date,
-  c.class_time,
-  c.occupied_spots
-FROM classes c
-WHERE c.date BETWEEN '2026-04-20' AND '2026-04-21'
-  AND c.discipline = 'Indoor Cycling'
-  AND c.occupied_spots @> jsonb_build_array(
-    jsonb_build_object('userId',
-      (SELECT id::text FROM profiles WHERE email_fallback ILIKE 'sira.armas@gmail.com')
+-- 7b. Verificar que NO tiene reserva activa (si tiene, el crédito ya fue aplicado)
+DO $$
+DECLARE
+  v_user_id   UUID;
+  v_class_id  UUID;
+  v_has_res   BOOLEAN := FALSE;
+BEGIN
+  SELECT id INTO v_user_id
+  FROM profiles
+  WHERE email_fallback ILIKE 'sira.armas@gmail.com';
+
+  IF v_user_id IS NULL THEN
+    RAISE NOTICE 'Usuario no encontrado — omitiendo verificación de reserva.';
+    RETURN;
+  END IF;
+
+  SELECT id INTO v_class_id
+  FROM classes
+  WHERE date BETWEEN '2026-04-20' AND '2026-04-21'
+    AND discipline = 'Indoor Cycling'
+    AND occupied_spots @> jsonb_build_array(
+      jsonb_build_object('userId', v_user_id::text)
     )
-  );
-*/
+  LIMIT 1;
 
--- 7d. REPARACIÓN: Devolver 1 crédito de Indoor Cycling
---     (Ejecutar SOLO si el diagnóstico confirma que NO tiene reserva activa)
-/*
-SELECT add_credits_by_email(
-  'sira.armas@gmail.com',
-  1,
-  NULL,
-  'Reembolso — crédito descontado sin reserva exitosa. 2026-04-20',
-  'indoor'
-);
-*/
+  v_has_res := v_class_id IS NOT NULL;
+  RAISE NOTICE 'sira.armas tiene reserva activa Indoor 20-21 Abr: % | clase_id: %',
+    v_has_res, COALESCE(v_class_id::text, 'ninguna');
+END;
+$$;
+
+-- 7c. REEMBOLSO SEGURO — solo si no hay reserva activa
+--   (La función add_credits_by_email verifica duplicados vía ledger si se re-ejecuta)
+DO $$
+DECLARE
+  v_user_id       UUID;
+  v_has_res       BOOLEAN := FALSE;
+  v_already_fixed BOOLEAN := FALSE;
+  v_result        JSONB;
+BEGIN
+  SELECT id INTO v_user_id
+  FROM profiles
+  WHERE email_fallback ILIKE 'sira.armas@gmail.com';
+
+  IF v_user_id IS NULL THEN
+    RAISE NOTICE 'SKIP: sira.armas@gmail.com no encontrada.';
+    RETURN;
+  END IF;
+
+  -- Verificar si ya fue reparado (evitar doble reembolso)
+  SELECT COUNT(*) > 0 INTO v_already_fixed
+  FROM credit_ledger
+  WHERE user_id = v_user_id
+    AND transaction_type = 'manual_admin'
+    AND notes ILIKE '%Reembolso%2026-04-20%';
+
+  IF v_already_fixed THEN
+    RAISE NOTICE 'SKIP: El reembolso de sira.armas ya fue aplicado previamente.';
+    RETURN;
+  END IF;
+
+  -- Verificar reserva activa
+  SELECT id IS NOT NULL INTO v_has_res
+  FROM classes
+  WHERE date BETWEEN '2026-04-20' AND '2026-04-21'
+    AND discipline = 'Indoor Cycling'
+    AND occupied_spots @> jsonb_build_array(
+      jsonb_build_object('userId', v_user_id::text)
+    )
+  LIMIT 1;
+
+  IF v_has_res THEN
+    RAISE NOTICE 'SKIP: sira.armas tiene reserva activa — crédito NO fue desperdiciado.';
+    RETURN;
+  END IF;
+
+  -- Ejecutar reembolso
+  SELECT add_credits_by_email(
+    'sira.armas@gmail.com',
+    1,
+    NULL,
+    'Reembolso — crédito Indoor Cycling descontado sin reserva exitosa. 2026-04-20',
+    'indoor'
+  ) INTO v_result;
+
+  RAISE NOTICE 'ÉXITO: Crédito restituido a sira.armas. Resultado: %', v_result::text;
+END;
+$$;
 
 -- ============================================================
 -- BLOQUE 8: VISTA ADMIN — Tabla de usuarios con créditos
