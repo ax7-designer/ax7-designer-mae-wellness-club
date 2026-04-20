@@ -295,13 +295,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         const adminCreditMgmt = document.getElementById('adminCreditMgmt');
         if (adminCreditMgmt) adminCreditMgmt.style.display = isAdmin(user) ? 'block' : 'none';
 
+        // Show/hide admin users table section
+        const adminUsersTable = document.getElementById('adminUsersTable');
+        if (adminUsersTable) adminUsersTable.style.display = isAdmin(user) ? 'block' : 'none';
+
         // Fetch official profile from table
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
 
         if (document.getElementById('fullNameInput')) document.getElementById('fullNameInput').value = profile?.full_name || '';
         if (document.getElementById('birthdayInput')) document.getElementById('birthdayInput').value = profile?.birthday || '';
-        if (document.getElementById('profileCreditsCount')) document.getElementById('profileCreditsCount').textContent = profile?.credits || '0';
         if (document.getElementById('interestInput')) document.getElementById('interestInput').value = profile?.preferred_discipline || 'all';
+
+        // Show per-discipline credit breakdown
+        const box = document.getElementById('profileBalanceBox');
+        if (box) {
+            const indoor  = profile?.credits_indoor  ?? 0;
+            const train   = profile?.credits_train   ?? 0;
+            const pilates = profile?.credits_pilates ?? 0;
+            const open    = profile?.credits_open    ?? 0;
+            const total   = indoor + train + pilates + open;
+
+            // If all is open (legacy) show simple view, else show breakdown
+            const hasCategories = indoor > 0 || train > 0 || pilates > 0;
+            if (hasCategories || open > 0) {
+                box.innerHTML = `
+                    <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Clases Disponibles</span>
+                    <div id="profileCreditsCount" style="font-size: 2.5rem; font-weight: 800; color: #2a9d8f;">${total}</div>
+                    ${ hasCategories ? `
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:12px; font-size:0.78rem;">
+                        <div style="background:rgba(201,169,110,0.08);border:1px solid rgba(201,169,110,0.2);border-radius:8px;padding:8px 10px;text-align:center;">
+                            <i class="fa-solid fa-bicycle" style="color:var(--accent-gold);"></i>
+                            <div style="font-size:1.1rem;font-weight:700;color:#fff;margin-top:2px;">${indoor}</div>
+                            <div style="color:var(--text-muted);font-size:0.7rem;">Indoor Cycling</div>
+                        </div>
+                        <div style="background:rgba(201,169,110,0.08);border:1px solid rgba(201,169,110,0.2);border-radius:8px;padding:8px 10px;text-align:center;">
+                            <i class="fa-solid fa-dumbbell" style="color:var(--accent-gold);"></i>
+                            <div style="font-size:1.1rem;font-weight:700;color:#fff;margin-top:2px;">${train}</div>
+                            <div style="color:var(--text-muted);font-size:0.7rem;">Train</div>
+                        </div>
+                        <div style="background:rgba(201,169,110,0.08);border:1px solid rgba(201,169,110,0.2);border-radius:8px;padding:8px 10px;text-align:center;">
+                            <i class="fa-solid fa-child-reaching" style="color:var(--accent-gold);"></i>
+                            <div style="font-size:1.1rem;font-weight:700;color:#fff;margin-top:2px;">${pilates}</div>
+                            <div style="color:var(--text-muted);font-size:0.7rem;">Pilates</div>
+                        </div>
+                        <div style="background:rgba(42,157,143,0.08);border:1px solid rgba(42,157,143,0.25);border-radius:8px;padding:8px 10px;text-align:center;">
+                            <i class="fa-solid fa-crown" style="color:#2a9d8f;"></i>
+                            <div style="font-size:1.1rem;font-weight:700;color:#2a9d8f;margin-top:2px;">${open}</div>
+                            <div style="color:var(--text-muted);font-size:0.7rem;">VIP (Comodín)</div>
+                        </div>
+                    </div>` : '' }
+                `;
+            } else {
+                box.innerHTML = `
+                    <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Clases Disponibles</span>
+                    <div id="profileCreditsCount" style="font-size: 2.5rem; font-weight: 800; color: #2a9d8f;">0</div>
+                `;
+            }
+        }
 
         if (profileGreeting) profileGreeting.textContent = `Hola, ${user.user_metadata?.full_name || user.email}`;
 
@@ -403,6 +453,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? new Date(profile.updated_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' })
                 : 'N/A';
 
+            const indoor  = profile.credits_indoor  ?? 0;
+            const train   = profile.credits_train   ?? 0;
+            const pilates = profile.credits_pilates ?? 0;
+            const open    = profile.credits_open    ?? 0;
+            const total   = profile.credits ?? (indoor + train + pilates + open);
+
             if (adminCreditPreview) {
                 adminCreditPreview.innerHTML = `
                     <div style="background:rgba(42,157,143,0.07); border:1px solid rgba(42,157,143,0.25); border-radius:10px; padding:14px; font-size:0.83rem;">
@@ -410,13 +466,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span style="color:var(--text-muted);">Usuario:</span>
                             <span style="color:#fff; font-weight:600;">${displayName}</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:7px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <span style="color:var(--text-muted);">Email:</span>
                             <span style="color:#ccc; font-size:0.8rem;">${profile.email_fallback}</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:7px;">
-                            <span style="color:var(--text-muted);">Saldo actual:</span>
-                            <span style="color:#2a9d8f; font-weight:800; font-size:1.1rem;">${profile.credits} clases</span>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+                            <div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:7px;padding:7px;text-align:center;font-size:0.75rem;">
+                                <i class="fa-solid fa-bicycle" style="color:var(--accent-gold);"></i>
+                                <div style="font-weight:700;color:#fff;">${indoor}</div>
+                                <div style="color:var(--text-muted);">Indoor</div>
+                            </div>
+                            <div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:7px;padding:7px;text-align:center;font-size:0.75rem;">
+                                <i class="fa-solid fa-dumbbell" style="color:var(--accent-gold);"></i>
+                                <div style="font-weight:700;color:#fff;">${train}</div>
+                                <div style="color:var(--text-muted);">Train</div>
+                            </div>
+                            <div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:7px;padding:7px;text-align:center;font-size:0.75rem;">
+                                <i class="fa-solid fa-child-reaching" style="color:var(--accent-gold);"></i>
+                                <div style="font-weight:700;color:#fff;">${pilates}</div>
+                                <div style="color:var(--text-muted);">Pilates</div>
+                            </div>
+                            <div style="background:rgba(42,157,143,0.08);border:1px solid rgba(42,157,143,0.2);border-radius:7px;padding:7px;text-align:center;font-size:0.75rem;">
+                                <i class="fa-solid fa-crown" style="color:#2a9d8f;"></i>
+                                <div style="font-weight:700;color:#2a9d8f;">${open}</div>
+                                <div style="color:var(--text-muted);">VIP</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.07);padding-top:7px;">
+                            <span style="color:var(--text-muted);">Total:</span>
+                            <span style="color:#2a9d8f; font-weight:800; font-size:1.1rem;">${total} clases</span>
                         </div>
                         <div style="color:var(--text-muted); font-size:0.75rem; margin-top:4px;">
                             <i class="fa-regular fa-clock" style="margin-right:4px;"></i>Última actualización: ${lastUpdate}
@@ -435,35 +513,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const amount = parseInt(document.getElementById('adminCreditAmount').value);
             const notes = document.getElementById('adminCreditNotes')?.value?.trim() || '';
+            const creditType = document.getElementById('adminCreditType')?.value || 'open';
 
             if (isNaN(amount) || amount <= 0) {
                 return showToast('Ingresa una cantidad válida (mayor a 0)', 'error');
             }
 
+            const typeLabels = { indoor: 'Indoor Cycling', train: 'Train', pilates: 'Pilates', open: 'VIP (Comodín)' };
             const displayName = adminTargetUser.full_name || adminTargetUser.nickname || adminTargetUser.email_fallback;
             const confirmed = confirm(
-                `¿Confirmas asignar ${amount} crédito(s)?\n\n` +
-                `Cliente: ${displayName}\n` +
-                `Saldo actual: ${adminTargetUser.credits} clases\n` +
-                `Saldo después: ${adminTargetUser.credits + amount} clases`
+                `¿Confirmas asignar ${amount} crédito(s) de ${typeLabels[creditType] || creditType}?\n\n` +
+                `Cliente: ${displayName}`
             );
             if (!confirmed) return;
 
             adminAddCreditsBtn.disabled = true;
             adminAddCreditsBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
 
-            // Call the refactored RPC — now returns rich JSON and writes to credit_ledger
             const { data, error } = await supabase.rpc('add_credits_by_email', {
-                target_email: adminTargetUser.email_fallback,
-                amount: amount,
-                p_admin_id: currentUser.id,
-                p_notes: notes || `Asignación manual — ${new Date().toLocaleDateString('es-MX')}`
+                target_email:  adminTargetUser.email_fallback,
+                amount:        amount,
+                p_admin_id:    currentUser.id,
+                p_notes:       notes || `Asignación manual — ${new Date().toLocaleDateString('es-MX')}`,
+                p_credit_type: creditType
             });
 
             if (error) {
                 showToast(`Error: ${error.message}`, 'error');
             } else {
-                showToast(`✓ ${amount} clase(s) asignadas. Nuevo saldo: ${data.new_balance}`, 'success');
+                showToast(`✓ ${amount} clase(s) de ${typeLabels[creditType]} asignadas. Nuevo saldo tipo: ${data.new_balance}`, 'success');
                 // Reset form state
                 document.getElementById('adminTargetEmail').value = '';
                 document.getElementById('adminCreditAmount').value = '';
@@ -478,6 +556,74 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (closeProfileModal) closeProfileModal.addEventListener('click', closeProfileModalFunc);
+
+    /* --- Admin: Load Users Table --- */
+    const adminLoadUsersBtn = document.getElementById('adminLoadUsersBtn');
+    if (adminLoadUsersBtn) {
+        adminLoadUsersBtn.addEventListener('click', async () => {
+            const tableBody = document.getElementById('adminUsersTableBody');
+            if (!tableBody) return;
+            adminLoadUsersBtn.disabled = true;
+            adminLoadUsersBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cargando...';
+            tableBody.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:16px;"><i class="fa-solid fa-spinner fa-spin"></i> Consultando base de datos...</p>';
+
+            const { data: users, error } = await supabase.rpc('get_all_users_admin');
+
+            adminLoadUsersBtn.disabled = false;
+            adminLoadUsersBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-right"></i> Cargar / Actualizar Tabla';
+
+            if (error) {
+                tableBody.innerHTML = `<p style="text-align:center;color:#e63946;font-size:0.8rem;padding:16px;">Error: ${error.message}</p>`;
+                return;
+            }
+
+            if (!users || users.length === 0) {
+                tableBody.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:16px;">No hay usuarios registrados.</p>';
+                return;
+            }
+
+            let html = `<table style="width:100%;border-collapse:collapse;font-size:0.75rem;min-width:560px;">
+                <thead>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);">
+                        <th style="padding:8px 10px;text-align:left;color:var(--accent-gold);white-space:nowrap;">Usuario</th>
+                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);" title="Indoor Cycling"><i class="fa-solid fa-bicycle"></i></th>
+                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);" title="Train"><i class="fa-solid fa-dumbbell"></i></th>
+                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);" title="Pilates"><i class="fa-solid fa-child-reaching"></i></th>
+                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);" title="VIP/Open"><i class="fa-solid fa-crown"></i></th>
+                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);">Total</th>
+                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);">Clases</th>
+                        <th style="padding:8px 10px;text-align:left;color:var(--accent-gold);white-space:nowrap;">Registro</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            users.forEach((u, idx) => {
+                const rowBg = idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+                const total = (u.creditos_indoor || 0) + (u.creditos_train || 0) + (u.creditos_pilates || 0) + (u.creditos_vip || 0);
+                const name = u.nombre || u.apodo || u.email || '—';
+                const totalStyle = total > 0 ? 'color:#2a9d8f;font-weight:700;' : 'color:var(--text-muted);';
+                html += `
+                    <tr style="background:${rowBg};border-bottom:1px solid rgba(255,255,255,0.04);">
+                        <td style="padding:8px 10px;max-width:160px;">
+                            <div style="font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${name}">${name}</div>
+                            <div style="color:var(--text-muted);font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${u.email || ''}">${u.email || ''}</div>
+                        </td>
+                        <td style="padding:8px 10px;text-align:center;color:${u.creditos_indoor > 0 ? '#c9a96e' : 'var(--text-muted)'};">${u.creditos_indoor || 0}</td>
+                        <td style="padding:8px 10px;text-align:center;color:${u.creditos_train > 0 ? '#c9a96e' : 'var(--text-muted)'};">${u.creditos_train || 0}</td>
+                        <td style="padding:8px 10px;text-align:center;color:${u.creditos_pilates > 0 ? '#c9a96e' : 'var(--text-muted)'};">${u.creditos_pilates || 0}</td>
+                        <td style="padding:8px 10px;text-align:center;color:${u.creditos_vip > 0 ? '#2a9d8f' : 'var(--text-muted)'};">${u.creditos_vip || 0}</td>
+                        <td style="padding:8px 10px;text-align:center;${totalStyle}">${total}</td>
+                        <td style="padding:8px 10px;text-align:center;color:var(--text-muted);">${u.clases_tomadas_total || 0}</td>
+                        <td style="padding:8px 10px;white-space:nowrap;color:var(--text-muted);font-size:0.7rem;">${u.fecha_registro || '—'}</td>
+                    </tr>`;
+            });
+
+            html += '</tbody></table>';
+            tableBody.innerHTML = html;
+        });
+    }
+
+
     if (profileModal) profileModal.addEventListener('click', (e) => { if (e.target === profileModal) closeProfileModalFunc(); });
 
     if (logoutBtn) {
@@ -1148,7 +1294,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const baseDate = new Date(selectedDateISO + 'T12:00:00');
             const baseClass = {
                 date: selectedDateISO, discipline, coach_name: coachName,
-                coach_img: coachImg, note, capacity: DISCIPLINE_CAPACITY[discipline], occupied_spots: []
+                coach_img: coachImg, note, capacity: DISCIPLINE_CAPACITY[discipline],
+                occupied_spots: [], class_time: time
             };
             const classesToInsert = [baseClass];
 
@@ -1170,7 +1317,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         finalNote = `[T:08:00]${rawNote}`;
                     }
 
-                    classesToInsert.push({ ...baseClass, date: iso, note: finalNote });
+                    classesToInsert.push({ ...baseClass, date: iso, note: finalNote, class_time: dayNum === 6 ? '08:00' : time });
                 }
             }
 

@@ -281,7 +281,7 @@
                         
                         <ul style="list-style: none; text-align: left; max-width: 350px; margin: 0 auto 40px auto; color: var(--text-light); line-height: 2.2;">
                             <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> Acceso a <strong>todas</strong> las disciplinas</li>
-                            <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> Hasta 30 clases al mes</li>
+                            <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> 30 clases disponibles</li>
                             <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> 3 Bebidas incluidas</li>
                             <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> 1 Artículo de Merch Exclusiva</li>
                             <li><i class="fa-solid fa-check" style="color: var(--accent-gold); margin-right: 15px;"></i> Acceso <strong>Gratuito</strong> a la Ludoteca</li>
@@ -300,7 +300,7 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px; background: rgba(201,169,110,0.07); border: 1px solid rgba(201,169,110,0.4); border-radius: 8px; padding: 12px 20px;">
                     <i class="fa-solid fa-crown" style="color: var(--accent-gold);"></i>
-                    <span style="font-size: 0.85rem; color: var(--text-muted);">Membresía VIP (Acceso Total): <strong style="color: var(--accent-gold);">40 días de vigencia</strong></span>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">Membresía VIP (Acceso Total): <strong style="color: var(--accent-gold);">50 días de vigencia</strong></span>
                 </div>
             </div>
 
@@ -607,8 +607,16 @@
                 <!-- Step 2: User preview (populated by JS) -->
                 <div id="adminCreditPreview" style="margin: 12px 0;"></div>
 
-                <!-- Step 3: Amount + Notes + Confirm -->
                 <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;">
+                    <label style="font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Tipo de crédito</label>
+                    <select id="adminCreditType"
+                           style="padding:10px 14px; border-radius:8px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.12); color:#fff; font-family:inherit; font-size:0.9rem;">
+                        <option value="indoor"><i class="fa-solid fa-bicycle"></i> Indoor Cycling</option>
+                        <option value="pilates">Pilates / Train</option>
+                        <option value="train">Train (individual)</option>
+                        <option value="open">&#128081; VIP / Comodín (vale todo)</option>
+                    </select>
+
                     <label style="font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Clases a asignar</label>
                     <input type="number" id="adminCreditAmount" min="1" max="100"
                            placeholder="Ej. 10"
@@ -623,6 +631,19 @@
                             style="padding: 12px; display:flex; align-items:center; justify-content:center; gap:8px;">
                         <i class="fa-solid fa-plus"></i> Asignar Créditos
                     </button>
+                </div>
+            </div>
+
+            <!-- Admin Only: Users Table -->
+            <div id="adminUsersTable" style="display:none; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h4 style="color: var(--accent-gold); margin-bottom: 15px; font-size: 0.9rem; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-users"></i> Todos los Usuarios
+                </h4>
+                <button id="adminLoadUsersBtn" class="btn-secondary-small" style="width:100%; margin-bottom:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <i class="fa-solid fa-arrow-rotate-right"></i> Cargar / Actualizar Tabla
+                </button>
+                <div id="adminUsersTableBody" style="overflow-x:auto; max-height:320px; overflow-y:auto; border-radius:8px; border:1px solid rgba(255,255,255,0.07);">
+                    <p style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:16px;">Presiona "Cargar" para ver los usuarios.</p>
                 </div>
             </div>
 
