@@ -425,11 +425,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             adminSearchUserBtn.disabled = true;
             adminSearchUserBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('id, email_fallback, credits, full_name, nickname, avatar, updated_at')
-                .ilike('email_fallback', email)
-                .single();
+            const { data: profileArr, error } = await supabase
+                .rpc('search_profile_by_email', { p_email: email });
+
+            const profile = profileArr?.[0] ?? null;
 
             adminSearchUserBtn.disabled = false;
             adminSearchUserBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Buscar';
@@ -1669,15 +1668,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Fetch profiles for all attendees in one query
-        const userIds = spots.map(s => s.userId).filter(Boolean);
-        const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, full_name, nickname, email_fallback')
-            .in('id', userIds);
+        // Usar RPC SECURITY DEFINER para respetar RLS (línea 1675 original → migrada)
+        const { data: rosterRows } = await supabase
+            .rpc('get_class_roster', { p_class_id: cls.id });
 
         const profileMap = {};
-        (profiles || []).forEach(p => { profileMap[p.id] = p; });
+        (rosterRows || []).forEach(r => {
+            profileMap[r.user_id] = { id: r.user_id, full_name: r.full_name, nickname: r.nickname, email_fallback: r.email };
+            // Enriquecer attendanceMap desde el roster también
+            if (r.status && r.status !== 'reserved') attendanceMap[r.user_id] = r.status;
+        });
 
         const statusColors = { reserved: '#c8a96e', attended: '#2a9d8f', no_show: '#e63946' };
         const statusIcons  = { reserved: 'fa-clock', attended: 'fa-circle-check', no_show: 'fa-circle-xmark' };
