@@ -425,10 +425,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             adminSearchUserBtn.disabled = true;
             adminSearchUserBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-            const { data: profileArr, error } = await supabase
-                .rpc('search_profile_by_email', { p_email: email });
-
-            const profile = profileArr?.[0] ?? null;
+            const { data: profile, error } = await supabase
+                .rpc('admin_search_user', { p_email: email });
 
             adminSearchUserBtn.disabled = false;
             adminSearchUserBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Buscar';
@@ -1668,16 +1666,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Usar RPC SECURITY DEFINER para respetar RLS (línea 1675 original → migrada)
-        const { data: rosterRows } = await supabase
-            .rpc('get_class_roster', { p_class_id: cls.id });
+        // Fetch profiles for all attendees in one query
+        const userIds = spots.map(s => s.userId).filter(Boolean);
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, nickname, email_fallback')
+            .in('id', userIds);
 
         const profileMap = {};
-        (rosterRows || []).forEach(r => {
-            profileMap[r.user_id] = { id: r.user_id, full_name: r.full_name, nickname: r.nickname, email_fallback: r.email };
-            // Enriquecer attendanceMap desde el roster también
-            if (r.status && r.status !== 'reserved') attendanceMap[r.user_id] = r.status;
-        });
+        (profiles || []).forEach(p => { profileMap[p.id] = p; });
 
         const statusColors = { reserved: '#c8a96e', attended: '#2a9d8f', no_show: '#e63946' };
         const statusIcons  = { reserved: 'fa-clock', attended: 'fa-circle-check', no_show: 'fa-circle-xmark' };
