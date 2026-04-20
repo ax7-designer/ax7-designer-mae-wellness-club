@@ -295,9 +295,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const adminCreditMgmt = document.getElementById('adminCreditMgmt');
         if (adminCreditMgmt) adminCreditMgmt.style.display = isAdmin(user) ? 'block' : 'none';
 
-        // Show/hide admin users table section
-        const adminUsersTable = document.getElementById('adminUsersTable');
-        if (adminUsersTable) adminUsersTable.style.display = isAdmin(user) ? 'block' : 'none';
 
         // Fetch official profile from table
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
@@ -554,75 +551,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             adminAddCreditsBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Asignar Créditos';
         });
     }
-
-    if (closeProfileModal) closeProfileModal.addEventListener('click', closeProfileModalFunc);
-
-    /* --- Admin: Load Users Table --- */
-    const adminLoadUsersBtn = document.getElementById('adminLoadUsersBtn');
-    if (adminLoadUsersBtn) {
-        adminLoadUsersBtn.addEventListener('click', async () => {
-            const tableBody = document.getElementById('adminUsersTableBody');
-            if (!tableBody) return;
-            adminLoadUsersBtn.disabled = true;
-            adminLoadUsersBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cargando...';
-            tableBody.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:16px;"><i class="fa-solid fa-spinner fa-spin"></i> Consultando base de datos...</p>';
-
-            const { data: users, error } = await supabase.rpc('get_all_users_admin');
-
-            adminLoadUsersBtn.disabled = false;
-            adminLoadUsersBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-right"></i> Cargar / Actualizar Tabla';
-
-            if (error) {
-                tableBody.innerHTML = `<p style="text-align:center;color:#e63946;font-size:0.8rem;padding:16px;">Error: ${error.message}</p>`;
-                return;
-            }
-
-            if (!users || users.length === 0) {
-                tableBody.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:16px;">No hay usuarios registrados.</p>';
-                return;
-            }
-
-            let html = `<table style="width:100%;border-collapse:collapse;font-size:0.75rem;min-width:560px;">
-                <thead>
-                    <tr style="border-bottom:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);">
-                        <th style="padding:8px 10px;text-align:left;color:var(--accent-gold);white-space:nowrap;">Usuario</th>
-                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);" title="Indoor Cycling"><i class="fa-solid fa-bicycle"></i></th>
-                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);" title="Train"><i class="fa-solid fa-dumbbell"></i></th>
-                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);" title="Pilates"><i class="fa-solid fa-child-reaching"></i></th>
-                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);" title="VIP/Open"><i class="fa-solid fa-crown"></i></th>
-                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);">Total</th>
-                        <th style="padding:8px 10px;text-align:center;color:var(--accent-gold);">Clases</th>
-                        <th style="padding:8px 10px;text-align:left;color:var(--accent-gold);white-space:nowrap;">Registro</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-            users.forEach((u, idx) => {
-                const rowBg = idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
-                const total = (u.creditos_indoor || 0) + (u.creditos_train || 0) + (u.creditos_pilates || 0) + (u.creditos_vip || 0);
-                const name = u.nombre || u.apodo || u.email || '—';
-                const totalStyle = total > 0 ? 'color:#2a9d8f;font-weight:700;' : 'color:var(--text-muted);';
-                html += `
-                    <tr style="background:${rowBg};border-bottom:1px solid rgba(255,255,255,0.04);">
-                        <td style="padding:8px 10px;max-width:160px;">
-                            <div style="font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${name}">${name}</div>
-                            <div style="color:var(--text-muted);font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${u.email || ''}">${u.email || ''}</div>
-                        </td>
-                        <td style="padding:8px 10px;text-align:center;color:${u.creditos_indoor > 0 ? '#c9a96e' : 'var(--text-muted)'};">${u.creditos_indoor || 0}</td>
-                        <td style="padding:8px 10px;text-align:center;color:${u.creditos_train > 0 ? '#c9a96e' : 'var(--text-muted)'};">${u.creditos_train || 0}</td>
-                        <td style="padding:8px 10px;text-align:center;color:${u.creditos_pilates > 0 ? '#c9a96e' : 'var(--text-muted)'};">${u.creditos_pilates || 0}</td>
-                        <td style="padding:8px 10px;text-align:center;color:${u.creditos_vip > 0 ? '#2a9d8f' : 'var(--text-muted)'};">${u.creditos_vip || 0}</td>
-                        <td style="padding:8px 10px;text-align:center;${totalStyle}">${total}</td>
-                        <td style="padding:8px 10px;text-align:center;color:var(--text-muted);">${u.clases_tomadas_total || 0}</td>
-                        <td style="padding:8px 10px;white-space:nowrap;color:var(--text-muted);font-size:0.7rem;">${u.fecha_registro || '—'}</td>
-                    </tr>`;
-            });
-
-            html += '</tbody></table>';
-            tableBody.innerHTML = html;
-        });
-    }
-
 
     if (profileModal) profileModal.addEventListener('click', (e) => { if (e.target === profileModal) closeProfileModalFunc(); });
 
