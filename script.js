@@ -173,6 +173,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 openModal();
             }
         }
+        
+        // --- STRIPE LINK INTERCEPTOR FOR GUESTS ---
+        const buyLink = e.target.closest('a[href^="https://buy.stripe.com"]');
+        if (buyLink && !currentUser) {
+            e.preventDefault(); e.stopPropagation();
+            window.pendingStripeUrl = buyLink.href;
+            
+            // Change Modal UI for Purchase Intent
+            const loginHeader = document.getElementById('loginModalHeader');
+            const waHelp = document.getElementById('loginWhatsAppHelp');
+            if (loginHeader) {
+                if (!window.originalLoginHTML) window.originalLoginHTML = loginHeader.innerHTML;
+                loginHeader.innerHTML = `
+                    <h2 style="color: var(--accent-gold); font-size: 1.8rem; margin-bottom: 10px;">¡Estás a un paso!</h2>
+                    <p style="font-size: 0.95rem; line-height: 1.5; color: var(--text-muted);">Para enviarte tus pases y que puedas apartar tus lugares, necesitamos crear tu perfil rápidamente. <strong style="color: #fff;">Toma menos de 1 minuto.</strong></p>
+                `;
+            }
+            if (waHelp) waHelp.style.display = 'block';
+
+            // Switch to signup mode if we are not already
+            if (!isSignupMode) {
+                const signupLink = document.getElementById('showSignupLink');
+                if (signupLink) signupLink.click();
+            }
+            openModal();
+        }
     }, { capture: true, passive: false });
 
     if (btnGoogle) {
@@ -764,6 +790,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     function closeModalFunc() {
         if (loginModal) { loginModal.classList.remove('active'); document.body.style.overflow = 'auto'; }
+        
+        // Revert modal UI if modified by purchase intent
+        const loginHeader = document.getElementById('loginModalHeader');
+        const waHelp = document.getElementById('loginWhatsAppHelp');
+        if (loginHeader && window.originalLoginHTML) {
+            loginHeader.innerHTML = window.originalLoginHTML;
+        }
+        if (waHelp) waHelp.style.display = 'none';
+        window.pendingStripeUrl = null;
     }
     function closeProfileModalFunc() {
         if (profileModal) { profileModal.classList.remove('active'); document.body.style.overflow = 'auto'; }
@@ -783,6 +818,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 closeModalFunc();
                 // Trigger auto-cleanup if admin
                 if (isAdmin(session.user)) performAutoCleanup();
+                
+                // REDIRECT TO STRIPE IF PENDING
+                if (window.pendingStripeUrl) {
+                    const finalUrl = new URL(window.pendingStripeUrl);
+                    finalUrl.searchParams.set('client_reference_id', session.user.id);
+                    finalUrl.searchParams.set('prefilled_email', session.user.email);
+                    window.location.href = finalUrl.toString();
+                    window.pendingStripeUrl = null;
+                }
             }
             if (event === 'PASSWORD_RECOVERY') {
                 const resetModal = document.getElementById('resetPasswordModal');
