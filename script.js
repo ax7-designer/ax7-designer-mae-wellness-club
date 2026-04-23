@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!window.originalLoginHTML) window.originalLoginHTML = loginHeader.innerHTML;
                 loginHeader.innerHTML = `
                     <h2 style="color: var(--accent-gold); font-size: 1.8rem; margin-bottom: 10px;">¡Estás a un paso!</h2>
-                    <p style="font-size: 0.95rem; line-height: 1.5; color: var(--text-muted);">Para enviarte tus pases y que puedas apartar tus lugares, necesitamos crear tu perfil rápidamente. <strong style="color: #fff;">Toma menos de 1 minuto.</strong></p>
+                    <p style="font-size: 0.95rem; line-height: 1.5; color: var(--text-muted);">Para comprar tus clases y reservar tu lugar. Necesitamos crear tu perfil, te tomará menos de un minuto.</p>
                 `;
             }
             if (waHelp) waHelp.style.display = 'block';
