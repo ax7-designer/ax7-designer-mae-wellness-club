@@ -2578,27 +2578,39 @@ button {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    margin-bottom: 25px;
 }
 .social-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-light);
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 500;
+    height: 58px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
     transition: all var(--transition-fast);
 }
 .social-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border-color: rgba(201, 169, 110, 0.4);
     transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
-.btn-facebook i { color: #1877F2; font-size: 1rem; }
+.btn-facebook i { 
+    color: #1877F2; 
+    font-size: 1.3rem; 
+}
+
+@media (max-width: 480px) {
+    .social-login-group { 
+        grid-template-columns: 1fr; 
+        gap: 10px;
+    }
+}
 
 .admin-badge-nav {
     background: rgba(201, 169, 110, 0.15);
@@ -2614,10 +2626,6 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-}
-
-@media (max-width: 480px) {
-    .social-login-group { grid-template-columns: 1fr; }
 }
 
 /* Session grouping and time tags */
