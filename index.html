@@ -727,6 +727,22 @@
                 </div>
             </div>
 
+            <!-- Admin Only: Failed Payments Monitor -->
+            <div id="adminFailedPayments"
+                style="display:none; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(230,57,70,0.25);">
+                <h4
+                    style="color: #e63946; margin-bottom: 15px; font-size: 0.9rem; display:flex; align-items:center; gap:8px; justify-content: space-between;">
+                    <span><i class="fa-solid fa-triangle-exclamation"></i> Pagos Fallidos</span>
+                    <span id="failedPaymentsBadge"
+                        style="background:#e63946; color:#fff; border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:700; display:none;"></span>
+                </h4>
+                <div id="failedPaymentsList"
+                    style="display:flex; flex-direction:column; gap:10px; max-height:320px; overflow-y:auto;">
+                    <p style="color:var(--text-muted); font-size:0.82rem; text-align:center; padding:10px;">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Cargando...
+                    </p>
+                </div>
+            </div>
 
             <!-- Avatar Selector -->
             <div class="avatar-section">

@@ -318,8 +318,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!profileModal) return;
 
         // Show/hide admin section
-        const adminCreditMgmt = document.getElementById('adminCreditMgmt');
-        if (adminCreditMgmt) adminCreditMgmt.style.display = isAdmin(user) ? 'block' : 'none';
+        const adminCreditMgmt      = document.getElementById('adminCreditMgmt');
+        const adminFailedPayments  = document.getElementById('adminFailedPayments');
+        const adminIsVisible       = isAdmin(user);
+        if (adminCreditMgmt)     adminCreditMgmt.style.display    = adminIsVisible ? 'block' : 'none';
+        if (adminFailedPayments) adminFailedPayments.style.display = adminIsVisible ? 'block' : 'none';
+        if (adminIsVisible) loadFailedPayments();
 
 
         // Fetch official profile from table
@@ -575,7 +579,133 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    /* -----------------------------------------------
+       ADMIN: FAILED PAYMENTS PANEL
+       Loads stripe_webhook_events with status='failed'
+       and renders a retry button for each.
+    ----------------------------------------------- */
+    async function loadFailedPayments() {
+        const container = document.getElementById('failedPaymentsList');
+        const badge     = document.getElementById('failedPaymentsBadge');
+        if (!container) return;
+
+        container.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;text-align:center;padding:10px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</p>';
+
+        const { data: events, error } = await supabase
+            .from('stripe_webhook_events')
+            .select('id, stripe_event_id, email, amount_credits, credit_type, mae_id, payment_intent, error_message, created_at')
+            .eq('status', 'failed')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            container.innerHTML = `<p style="color:#e63946;font-size:0.8rem;text-align:center;">Error al cargar: ${error.message}</p>`;
+            return;
+        }
+
+        if (!events || events.length === 0) {
+            container.innerHTML = '<p style="color:#2a9d8f;font-size:0.85rem;text-align:center;padding:12px;"><i class="fa-solid fa-check-circle"></i> ¡Sin pagos fallidos! Todo en orden.</p>';
+            if (badge) badge.style.display = 'none';
+            return;
+        }
+
+        // Show badge count
+        if (badge) {
+            badge.textContent = events.length;
+            badge.style.display = 'inline-block';
+        }
+
+        const CREDIT_LABELS = { indoor: '🚴 Indoor Cycling', train: '🏋️ Train', pilates: '🧘 Pilates', open: '👑 VIP' };
+        const CREDIT_COLORS = { indoor: '#c9a96e', train: '#c9a96e', pilates: '#c9a96e', open: '#2a9d8f' };
+
+        container.innerHTML = '';
+        events.forEach(ev => {
+            const dateStr = new Date(ev.created_at).toLocaleDateString('es-MX', {
+                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            const creditLabel = CREDIT_LABELS[ev.credit_type] || ev.credit_type;
+            const creditColor = CREDIT_COLORS[ev.credit_type] || '#ccc';
+
+            const card = document.createElement('div');
+            card.style.cssText = `
+                background: rgba(230,57,70,0.05);
+                border: 1px solid rgba(230,57,70,0.2);
+                border-radius: 10px;
+                padding: 12px 14px;
+                font-size: 0.8rem;
+            `;
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="color:#fff; font-weight:700; margin-bottom:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            ${ev.email || 'Sin email'}
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+                            <span style="color:${creditColor}; font-weight:700;">${ev.amount_credits ?? '?'} clase(s) ${creditLabel}</span>
+                        </div>
+                        <div style="color:var(--text-muted); font-size:0.72rem;">${dateStr}</div>
+                        ${ev.error_message ? `<div style="color:rgba(230,57,70,0.8);font-size:0.7rem;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${ev.error_message}">⚠ ${ev.error_message.substring(0, 60)}${ev.error_message.length > 60 ? '...' : ''}</div>` : ''}
+                    </div>
+                    <button
+                        class="retry-webhook-btn"
+                        data-event-id="${ev.id}"
+                        style="
+                            background: linear-gradient(135deg, #2a9d8f, #1a7a6e);
+                            color: #fff; border: none; border-radius: 8px;
+                            padding: 8px 12px; cursor: pointer; font-size: 0.75rem;
+                            font-family: inherit; font-weight: 700; white-space: nowrap;
+                            display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+                        ">
+                        <i class="fa-solid fa-rotate-right"></i> Reintentar
+                    </button>
+                </div>
+            `;
+
+            // Retry button handler
+            card.querySelector('.retry-webhook-btn').addEventListener('click', async (e) => {
+                const btn = e.currentTarget;
+                const eventId = parseInt(btn.dataset.eventId);
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+                const { data, error: rpcError } = await supabase.rpc('retry_failed_webhook', {
+                    p_event_id: eventId
+                });
+
+                if (rpcError || !data?.ok) {
+                    const msg = rpcError?.message || data?.error || 'Error desconocido';
+                    showToast(`❌ Retry falló: ${msg}`, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Reintentar';
+                } else {
+                    showToast(`✅ ${data.credits_added} crédito(s) asignado(s) correctamente`, 'success');
+                    // Remove the card with animation
+                    card.style.transition = 'opacity 0.4s, max-height 0.4s';
+                    card.style.opacity = '0';
+                    card.style.maxHeight = '0';
+                    card.style.overflow = 'hidden';
+                    setTimeout(() => {
+                        card.remove();
+                        // Update badge count
+                        const remaining = container.querySelectorAll('.retry-webhook-btn').length;
+                        if (badge) {
+                            if (remaining === 0) {
+                                badge.style.display = 'none';
+                                container.innerHTML = '<p style="color:#2a9d8f;font-size:0.85rem;text-align:center;padding:12px;"><i class="fa-solid fa-check-circle"></i> ¡Sin pagos fallidos! Todo en orden.</p>';
+                            } else {
+                                badge.textContent = remaining;
+                            }
+                        }
+                    }, 400);
+                }
+            });
+
+            container.appendChild(card);
+        });
+    }
+
     if (profileModal) profileModal.addEventListener('click', (e) => { if (e.target === profileModal) closeProfileModalFunc(); });
+
 
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
@@ -805,6 +935,117 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
+
+    /* -----------------------------------------------
+       POST-PAYMENT RETURN HANDLER
+       Detects ?pago=exitoso on URL, polls for credits
+       up to 30s, shows alert if they don't arrive.
+    ----------------------------------------------- */
+    async function handlePaymentReturn() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('pago') !== 'exitoso') return;
+
+        // Clean the URL immediately so a refresh doesn't re-trigger
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState(null, null, cleanUrl);
+
+        // Must be logged in to poll
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        // Show immediate confirmation
+        showToast('💳 ¡Pago recibido! Asignando tu(s) clase(s)...', 'info');
+
+        // Read baseline credits
+        const { data: baseline } = await supabase
+            .from('profiles')
+            .select('credits_indoor, credits_train, credits_pilates, credits_open')
+            .eq('id', session.user.id)
+            .single();
+
+        const baseTotal = baseline
+            ? (baseline.credits_indoor + baseline.credits_train + baseline.credits_pilates + baseline.credits_open)
+            : 0;
+
+        // Poll every 3s for up to 30s
+        let attempts = 0;
+        const maxAttempts = 10;
+
+        const poll = setInterval(async () => {
+            attempts++;
+            const { data: current } = await supabase
+                .from('profiles')
+                .select('credits_indoor, credits_train, credits_pilates, credits_open')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!current) { if (attempts >= maxAttempts) clearInterval(poll); return; }
+
+            const currentTotal = current.credits_indoor + current.credits_train + current.credits_pilates + current.credits_open;
+
+            if (currentTotal > baseTotal) {
+                clearInterval(poll);
+                const gained = currentTotal - baseTotal;
+                showToast(`✅ ¡Listo! Se añadieron ${gained} clase(s) a tu cuenta.`, 'success');
+                // Refresh credits display if profile modal is open
+                const box = document.getElementById('profileCreditsCount');
+                if (box) box.textContent = currentTotal;
+                return;
+            }
+
+            if (attempts >= maxAttempts) {
+                clearInterval(poll);
+                // Credits didn't arrive — show sticky alert banner
+                const existingBanner = document.getElementById('paymentAlertBanner');
+                if (existingBanner) return;
+
+                const banner = document.createElement('div');
+                banner.id = 'paymentAlertBanner';
+                banner.innerHTML = `
+                    <div style="
+                        position: fixed; bottom: 0; left: 0; right: 0; z-index: 99998;
+                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                        border-top: 2px solid var(--accent-gold);
+                        padding: 16px 24px;
+                        display: flex; align-items: center; justify-content: space-between;
+                        flex-wrap: wrap; gap: 12px;
+                        box-shadow: 0 -8px 30px rgba(0,0,0,0.5);
+                        font-family: inherit;
+                    ">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-gold); font-size:1.4rem;"></i>
+                            <div>
+                                <div style="color:#fff; font-weight:700; font-size:0.95rem;">Tu pago fue exitoso, pero tus clases aún no aparecen</div>
+                                <div style="color:var(--text-muted); font-size:0.82rem; margin-top:2px;">Nuestro equipo lo revisará. Escríbenos por WhatsApp y lo resolvemos al instante.</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <a href="https://wa.me/529984910522?text=Hola%2C%20pagu%C3%A9%20una%20clase%20pero%20no%20me%20aparece%20en%20mi%20cuenta" 
+                               target="_blank" rel="noopener"
+                               style="
+                                   background: #25D366; color: #fff; text-decoration:none;
+                                   padding: 10px 18px; border-radius: 25px;
+                                   font-weight: 700; font-size: 0.85rem;
+                                   display:flex; align-items:center; gap:7px;
+                                   white-space: nowrap;
+                               ">
+                                <i class="fa-brands fa-whatsapp"></i> Escribir por WhatsApp
+                            </a>
+                            <button onclick="document.getElementById('paymentAlertBanner').remove()" style="
+                                background: transparent; border: 1px solid rgba(255,255,255,0.2);
+                                color: var(--text-muted); padding: 9px 14px; border-radius: 20px;
+                                cursor: pointer; font-size: 0.82rem; font-family: inherit;
+                            ">Cerrar</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(banner);
+            }
+        }, 3000);
+    }
+
+    // Run payment return handler on page load
+    handlePaymentReturn();
 
     supabase.auth.onAuthStateChange((event, session) => {
         if (session) {
