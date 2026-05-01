@@ -1729,17 +1729,47 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            card.addEventListener('click', () => {
+            card.addEventListener('click', async () => {
                 document.querySelectorAll('.daily-class-card').forEach(c => c.classList.remove('active'));
                 card.classList.add('active');
-                showClassDetails(cls);
+                await showClassDetails(cls);
             });
             dailyClassesList.appendChild(card);
         });
     }
 
-    function showClassDetails(cls) {
+    async function showClassDetails(cls) {
         selectedClassConfig = cls;
+
+        // --- AUTO-REVEAL ANONYMOUS USERS ---
+        // If there are anonymous spots, we try to reveal them locally for the view
+        const spots = cls.occupied_spots || [];
+        const anonUserIds = spots
+            .filter(s => s.displayName === 'Anónimo' || s.displayName === 'anon')
+            .map(s => s.userId)
+            .filter(Boolean);
+
+        if (anonUserIds.length > 0) {
+            const { data: profiles } = await supabase.from('profiles').select('id, full_name, nickname').in('id', anonUserIds);
+            if (profiles) {
+                profiles.forEach(p => {
+                    const revealedName = p.full_name || p.nickname || 'Usuario Registrado';
+                    spots.forEach(s => {
+                        if (s.userId === p.id && (s.displayName === 'Anónimo' || s.displayName === 'anon')) {
+                            s.displayName = revealedName;
+                        }
+                    });
+                });
+            }
+            // For those still anonymous (no profile found)
+            spots.forEach(s => {
+                if ((s.displayName === 'Anónimo' || s.displayName === 'anon') && s.userId) {
+                     const found = profiles?.find(p => p.id === s.userId);
+                     if (!found) s.displayName = 'Usuario Inactivo';
+                }
+            });
+        }
+        // -----------------------------------
         const discImg = DISCIPLINE_IMAGES[cls.discipline.toLowerCase()];
         const fallback = logoImgUrl;
         const finalSrc = discImg || cls.coach_img || fallback;

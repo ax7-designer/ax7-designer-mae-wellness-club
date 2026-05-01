@@ -798,8 +798,7 @@ button {
 }
 
 .best-value .btn-primary {
-    background: var(--accent-gold);
-    color: var(--bg-primary);
+    /* Uses default .btn-primary style */
 }
 
 .best-value .btn-primary:hover {
