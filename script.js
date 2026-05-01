@@ -1,4 +1,8 @@
 import { supabase } from './supabaseClient.js';
+import pilatesImgUrl from './pilates_deseada.jpg';
+import trainImgUrl from './train_deseada.jpg';
+import indoorImgUrl from './indoor_deseada.jpg';
+import logoImgUrl from './mae_logo.png';
 
 /* ============================================================
    CONSTANTS
@@ -35,9 +39,9 @@ const DISCIPLINE_ICONS = {
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const DISCIPLINE_IMAGES = {
-    'pilates': 'pilates_deseada.jpg',
-    'train': 'train_deseada.jpg',
-    'indoor cycling': 'indoor_deseada.jpg'
+    'pilates': pilatesImgUrl,
+    'train': trainImgUrl,
+    'indoor cycling': indoorImgUrl
 };
 
 /* ============================================================
@@ -1099,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Format display info for details view
                 if (scCoachImg) {
                     const discImg = DISCIPLINE_IMAGES[selectedClassConfig.discipline.toLowerCase()];
-                    const fallback = 'mae_logo.png';
+                    const fallback = logoImgUrl;
                     const finalSrc = discImg || selectedClassConfig.coach_img || fallback;
                     
                     scCoachImg.style.opacity = '0';
@@ -1737,7 +1741,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showClassDetails(cls) {
         selectedClassConfig = cls;
         const discImg = DISCIPLINE_IMAGES[cls.discipline.toLowerCase()];
-        const fallback = 'mae_logo.png';
+        const fallback = logoImgUrl;
         const finalSrc = discImg || cls.coach_img || fallback;
 
         if (scCoachImg) {
