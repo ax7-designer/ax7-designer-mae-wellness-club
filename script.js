@@ -1789,12 +1789,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!pendingCls || !pendingSpot || !currentUser) return;
 
             const displaySelect = document.getElementById('reserveDisplayName');
-            const selected = displaySelect?.value || 'anon';
             const meta = currentUser.user_metadata || {};
-            let displayName;
-            if (selected === 'name') displayName = meta.full_name || currentUser.email.split('@')[0];
-            else if (selected === 'nick') displayName = meta.nickname || currentUser.email.split('@')[0];
-            else displayName = 'Anónimo';
+            let displayName = meta.full_name || currentUser.email.split('@')[0];
 
             confirmReserveBtn.disabled = true;
             confirmReserveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -1869,8 +1865,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const sel = document.getElementById('reserveDisplayName');
                     if (sel) {
                         sel.innerHTML = `
-                            <option value="anon">Anónimo</option>
-                            <option value="nick">${meta.nickname ? `Apodo: ${meta.nickname}` : 'Apodo (no definido)'}</option>
                             <option value="name">Nombre: ${meta.full_name || currentUser.email.split('@')[0]}</option>
                         `;
                     }
