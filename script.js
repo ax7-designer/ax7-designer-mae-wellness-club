@@ -68,6 +68,15 @@ function getISOFromDate(d) {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+let _refreshPromise = null;
+async function safeGetSession() {
+    if (_refreshPromise) return _refreshPromise;
+    _refreshPromise = supabase.auth.getSession().finally(() => {
+        _refreshPromise = null;
+    });
+    return _refreshPromise;
+}
+
 function isAdmin(user) {
     return user && ADMIN_EMAILS.includes(user.email);
 }
@@ -1052,6 +1061,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     handlePaymentReturn();
 
     supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'TOKEN_REFRESHED') {
+            console.log('Token renovado silenciosamente');
+        }
+        if (event === 'SIGNED_OUT') {
+            currentUser = null;
+            updateAuthUI(null);
+            return;
+        }
+
         if (session) {
             updateAuthUI(session.user);
             if (window.location.hash.includes('access_token')) {
@@ -1821,6 +1839,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (confirmReserveBtn) {
         confirmReserveBtn.addEventListener('click', async () => {
             if (!pendingCls || !pendingSpot || !currentUser) return;
+
+            // Validar sesión activa antes de proceder (Fix Token Storm / Session Expiration)
+            const { data: { session }, error: sessionError } = await safeGetSession();
+            if (!session || sessionError) {
+                showToast('Tu sesión expiró. Por favor inicia sesión nuevamente.', 'error');
+                reserveModal.classList.remove('active');
+                openModal(); // Abre el modal de login
+                return;
+            }
 
             const displaySelect = document.getElementById('reserveDisplayName');
             const meta = currentUser.user_metadata || {};
