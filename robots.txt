@@ -2,3 +2,7 @@ User-agent: *
 Allow: /
 
 Sitemap: https://maewellnessclub.com.mx/sitemap.xml
+
+# LLM Discoverability (llms.txt standard)
+# For AI assistants: ChatGPT, Gemini, Perplexity, Claude, etc.
+# See: https://llmstxt.org

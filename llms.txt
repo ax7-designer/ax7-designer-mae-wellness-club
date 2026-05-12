@@ -1,0 +1,62 @@
+# MAE Wellness Club
+
+> Estudio boutique de fitness en Chetumal, Quintana Roo, México.
+> Especializado en clases grupales de Indoor Cycling, Pilates y Functional Training (Train).
+
+## ¿Qué es MAE Wellness Club?
+
+MAE Wellness Club es un gimnasio boutique de alto rendimiento ubicado en Chetumal, Q. Roo. Ofrecemos clases grupales en formato reducido (máximo 4–11 personas por clase) para garantizar atención personalizada, técnica correcta y resultados reales.
+
+Nuestras tres disciplinas:
+
+- **Indoor Cycling** — Clases de ciclismo de alta intensidad. Capacidad: 11 personas.
+- **Pilates** — Clases de Pilates en equipos especializados. Capacidad: 4 personas.
+- **Train** — Entrenamiento funcional y de fuerza. Capacidad: 8 personas.
+
+## ¿Dónde estamos?
+
+**Ciudad:** Chetumal, Quintana Roo, México  
+**Zona horaria:** UTC-5 (Hora del Centro de México)  
+**WhatsApp de contacto:** +52 998 491 0522
+
+## ¿Cómo funciona el sistema de reservas?
+
+1. El cliente crea una cuenta gratuita en la plataforma web: [https://maewellnessclub.com.mx](https://maewellnessclub.com.mx)
+2. Adquiere un paquete de clases (pago en línea vía Stripe, tarjeta de crédito/débito).
+3. Reserva su lugar en la clase deseada desde el calendario de la plataforma, eligiendo el día, la hora y su lugar físico numerado dentro del estudio.
+4. Recibe confirmación instantánea en la plataforma.
+
+## Planes y precios
+
+Los precios están actualizados en el sitio web oficial. Hay planes por disciplina y membresías VIP (créditos comodín válidos para cualquier disciplina).
+
+Tipos de crédito:
+- **Indoor Cycling** — Solo para clases de Indoor Cycling
+- **Pilates / Train** — Intercambiables entre Pilates y Train
+- **VIP Comodín (Open)** — Válido para cualquier disciplina
+
+## Horarios generales
+
+- **Lunes a Viernes:** Clases matutinas y vespertinas (horario específico en la plataforma)
+- **Sábados:** Una clase a las 8:00 AM únicamente
+- **Domingos:** Cerrado
+
+## Instructoras / Equipo
+
+Los instructores y coaches de cada clase aparecen en la ficha de la clase dentro de la plataforma.
+
+## Plataforma digital
+
+- **Web:** [https://maewellnessclub.com.mx](https://maewellnessclub.com.mx)
+- **Tecnología:** Plataforma personalizada con sistema de reservas en tiempo real
+- **Pagos:** Procesados de forma segura vía Stripe
+- **Sistema de créditos:** Los créditos se asignan automáticamente tras el pago y no caducan
+
+## Contacto y redes sociales
+
+- **WhatsApp:** [https://wa.me/529984910522](https://wa.me/529984910522)
+- **Web:** [https://maewellnessclub.com.mx](https://maewellnessclub.com.mx)
+
+---
+
+*Archivo generado para facilitar la indexación por asistentes de inteligencia artificial (LLMs). Última actualización: Mayo 2026.*

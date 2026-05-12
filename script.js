@@ -1295,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         dateScrollContainer.innerHTML = '';
         const today = getChetumalDate(); // Use Chetumal time for "Today"
 
-        for (let i = 0; i < 31; i++) {
+        for (let i = 0; i < 60; i++) {
             const d = new Date(today);
             d.setDate(today.getDate() + i);
             const thisISO = getISOFromDate(d);
@@ -1919,15 +1919,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 spotDiv.innerHTML = `<div class="spot-num">${i}</div><div class="status">Reservar</div>`;
                 spotDiv.addEventListener('click', () => {
                     if (!currentUser) { openModal(); return; }
+
+                    // ADMIN PATH: Show choice modal (self vs client)
+                    if (isAdmin(currentUser)) {
+                        showAdminSpotChoiceModal(cls, i);
+                        return;
+                    }
+
+                    // NORMAL USER PATH: existing flow
                     pendingSpot = i;
                     pendingCls = cls;
                     const meta = currentUser.user_metadata || {};
-                    // Populate display name options
                     const sel = document.getElementById('reserveDisplayName');
                     if (sel) {
-                        sel.innerHTML = `
-                            <option value="name">Nombre: ${meta.full_name || currentUser.email.split('@')[0]}</option>
-                        `;
+                        sel.innerHTML = `<option value="name">Nombre: ${meta.full_name || currentUser.email.split('@')[0]}</option>`;
                     }
                     const spotLabel = document.getElementById('reserveSpotLabel');
                     if (spotLabel) spotLabel.textContent = `Lugar #${i}`;
@@ -1942,6 +1947,340 @@ document.addEventListener('DOMContentLoaded', async () => {
             spotsGrid.appendChild(spotDiv);
         }
     };
+
+    /* -----------------------------------------------
+       ADMIN SPOT CHOICE MODAL
+       Step 0: Shown when admin clicks a free spot.
+    ----------------------------------------------- */
+    function showAdminSpotChoiceModal(cls, spotNum) {
+        let choiceModal = document.getElementById('adminSpotChoiceModal');
+        if (!choiceModal) {
+            choiceModal = document.createElement('div');
+            choiceModal.id = 'adminSpotChoiceModal';
+            choiceModal.className = 'modal-overlay';
+            document.body.appendChild(choiceModal);
+        }
+
+        choiceModal.innerHTML = `
+            <div class="modal-content" style="max-width:420px; text-align:center;">
+                <button class="close-btn" id="closeAdminChoiceModal" aria-label="Cerrar">&times;</button>
+                <div class="modal-header" style="padding-bottom:12px;">
+                    <i class="fa-solid fa-shield-halved" style="font-size:2rem; color:var(--accent-gold); margin-bottom:8px;"></i>
+                    <h2 style="font-size:1.4rem;">Reservar Lugar <span style="color:var(--accent-gold);">#${spotNum}</span></h2>
+                    <p style="color:var(--text-muted); font-size:0.88rem;">${cls.discipline} &middot; ${cls.time12 || ''}</p>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:14px; padding:0 8px 8px;">
+                    <button id="adminChoiceSelf" style="
+                        background:linear-gradient(135deg,rgba(42,157,143,0.15),rgba(42,157,143,0.05));
+                        border:1px solid rgba(42,157,143,0.4); color:#2a9d8f;
+                        padding:16px 20px; border-radius:14px; cursor:pointer;
+                        font-family:inherit; font-size:0.95rem; font-weight:600;
+                        display:flex; align-items:center; gap:12px; text-align:left; transition:all 0.2s;
+                    ">
+                        <i class="fa-solid fa-user-shield" style="font-size:1.3rem; flex-shrink:0;"></i>
+                        <div>
+                            <div>Para m&#237; mismo</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Reserva est&#225;ndar a tu nombre</div>
+                        </div>
+                    </button>
+                    <button id="adminChoiceClient" style="
+                        background:linear-gradient(135deg,rgba(201,169,110,0.15),rgba(201,169,110,0.05));
+                        border:1px solid rgba(201,169,110,0.4); color:var(--accent-gold);
+                        padding:16px 20px; border-radius:14px; cursor:pointer;
+                        font-family:inherit; font-size:0.95rem; font-weight:600;
+                        display:flex; align-items:center; gap:12px; text-align:left; transition:all 0.2s;
+                    ">
+                        <i class="fa-solid fa-user-plus" style="font-size:1.3rem; flex-shrink:0;"></i>
+                        <div>
+                            <div>Para un cliente</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Reserva asistida &middot; elige si descontamos cr&#233;dito</div>
+                        </div>
+                    </button>
+                </div>
+            </div>`;
+
+        choiceModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        const closeChoice = () => { choiceModal.classList.remove('active'); document.body.style.overflow = 'auto'; };
+        document.getElementById('closeAdminChoiceModal').onclick = closeChoice;
+        choiceModal.onclick = (e) => { if (e.target === choiceModal) closeChoice(); };
+
+        // Book for self — normal flow
+        document.getElementById('adminChoiceSelf').onclick = () => {
+            closeChoice();
+            pendingSpot = spotNum; pendingCls = cls;
+            const meta = currentUser.user_metadata || {};
+            const sel = document.getElementById('reserveDisplayName');
+            if (sel) sel.innerHTML = `<option value="name">Nombre: ${meta.full_name || currentUser.email.split('@')[0]}</option>`;
+            const spotLabel = document.getElementById('reserveSpotLabel');
+            if (spotLabel) spotLabel.textContent = `Lugar #${spotNum}`;
+            const classLabel = document.getElementById('reserveClassLabel');
+            if (classLabel) classLabel.textContent = `${cls.discipline}`;
+            if (reserveModal) reserveModal.classList.add('active');
+        };
+
+        // Book for client — assisted flow
+        document.getElementById('adminChoiceClient').onclick = () => { closeChoice(); showAdminBookModal(cls, spotNum); };
+    }
+
+    /* -----------------------------------------------
+       ADMIN BOOK MODAL (2 steps)
+       Step 1: Search client by email
+       Step 2: Preview credits + deduct toggle + confirm
+    ----------------------------------------------- */
+    function showAdminBookModal(cls, spotNum) {
+        let modal = document.getElementById('adminBookModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'adminBookModal';
+            modal.className = 'modal-overlay';
+            document.body.appendChild(modal);
+        }
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:460px; max-height:88vh; overflow-y:auto;">
+                <button class="close-btn" id="closeAdminBookModal" aria-label="Cerrar">&times;</button>
+                <div class="modal-header" style="padding-bottom:12px;">
+                    <i class="fa-solid fa-user-plus" style="font-size:2rem; color:var(--accent-gold); margin-bottom:8px;"></i>
+                    <h2 style="font-size:1.35rem;">Reserva Asistida</h2>
+                    <div style="display:inline-flex; align-items:center; gap:8px;
+                        background:rgba(201,169,110,0.1); border:1px solid rgba(201,169,110,0.25);
+                        border-radius:20px; padding:5px 14px; margin-top:6px;
+                        font-size:0.8rem; color:var(--accent-gold); font-weight:600;">
+                        <i class="fa-solid fa-location-dot"></i> Lugar #${spotNum} &middot; ${cls.discipline} &middot; ${cls.time12 || ''}
+                    </div>
+                </div>
+
+                <!-- STEP 1 -->
+                <div id="adminBookStep1" style="padding:0 4px;">
+                    <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">
+                        <i class="fa-solid fa-magnifying-glass" style="color:var(--accent-gold); margin-right:6px;"></i>
+                        Busca al cliente por su correo electr&#243;nico
+                    </p>
+                    <div style="display:flex; gap:8px;">
+                        <input id="adminBookEmail" type="email" placeholder="correo@cliente.com" autocomplete="off"
+                            style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);
+                                border-radius:10px; padding:11px 14px; color:#fff; font-family:inherit;
+                                font-size:0.88rem; outline:none;"/>
+                        <button id="adminBookSearchBtn" style="
+                            background:linear-gradient(135deg,var(--accent-gold),#b8902e);
+                            border:none; border-radius:10px; padding:11px 16px;
+                            color:#1a1a2e; font-family:inherit; font-weight:700;
+                            cursor:pointer; font-size:0.85rem; white-space:nowrap;
+                            display:flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-magnifying-glass"></i> Buscar
+                        </button>
+                    </div>
+                    <div id="adminBookSearchResult" style="margin-top:12px;"></div>
+                </div>
+
+                <!-- STEP 2 -->
+                <div id="adminBookStep2" style="display:none; padding:0 4px;">
+                    <div id="adminBookClientCard" style="
+                        background:rgba(42,157,143,0.06); border:1px solid rgba(42,157,143,0.2);
+                        border-radius:12px; padding:14px; margin-bottom:16px; font-size:0.82rem;
+                    "></div>
+
+                    <!-- Toggle: descontar crédito -->
+                    <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+                        border-radius:12px; padding:14px; margin-bottom:16px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                            <div>
+                                <div style="font-size:0.88rem; font-weight:600; color:#fff; margin-bottom:3px;">
+                                    <i class="fa-solid fa-coins" style="color:var(--accent-gold); margin-right:6px;"></i>
+                                    Descontar cr&#233;dito al cliente
+                                </div>
+                                <div id="adminBookDeductHint" style="font-size:0.73rem; color:var(--text-muted); line-height:1.4;"></div>
+                            </div>
+                            <label style="flex-shrink:0; position:relative; display:inline-block; width:48px; height:26px; cursor:pointer;">
+                                <input type="checkbox" id="adminBookDeductToggle" checked
+                                    style="opacity:0; width:0; height:0; position:absolute;">
+                                <span id="adminBookToggleTrack" style="position:absolute; inset:0; border-radius:26px;
+                                    background:linear-gradient(135deg,#2a9d8f,#1a7a6e); transition:background 0.3s;"></span>
+                                <span id="adminBookToggleThumb" style="position:absolute; left:4px; top:4px;
+                                    width:18px; height:18px; border-radius:50%; background:#fff;
+                                    transition:transform 0.3s; transform:translateX(22px);"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <button id="adminBookBackBtn" style="
+                            flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+                            color:var(--text-muted); padding:12px; border-radius:12px;
+                            font-family:inherit; font-size:0.88rem; cursor:pointer;
+                            display:flex; align-items:center; justify-content:center; gap:7px;">
+                            <i class="fa-solid fa-arrow-left"></i> Atr&#225;s
+                        </button>
+                        <button id="adminBookConfirmBtn" style="
+                            flex:2; background:linear-gradient(135deg,var(--accent-gold),#b8902e);
+                            border:none; color:#1a1a2e; padding:12px 20px; border-radius:12px;
+                            font-family:inherit; font-size:0.92rem; font-weight:700; cursor:pointer;
+                            display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <i class="fa-solid fa-check"></i> Confirmar Reserva
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        let foundClient = null;
+
+        const closeModal = () => { modal.classList.remove('active'); document.body.style.overflow = 'auto'; foundClient = null; };
+        document.getElementById('closeAdminBookModal').onclick = closeModal;
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+        // Toggle visual sync
+        const deductToggle = document.getElementById('adminBookDeductToggle');
+        const toggleTrack  = document.getElementById('adminBookToggleTrack');
+        const toggleThumb  = document.getElementById('adminBookToggleThumb');
+        const deductHint   = document.getElementById('adminBookDeductHint');
+        function syncToggleUI() {
+            const on = deductToggle.checked;
+            toggleTrack.style.background = on ? 'linear-gradient(135deg,#2a9d8f,#1a7a6e)' : 'rgba(255,255,255,0.12)';
+            toggleThumb.style.transform  = on ? 'translateX(22px)' : 'translateX(0px)';
+            deductHint.textContent = on
+                ? 'Se descontar\u00e1 1 cr\u00e9dito de la cuenta del cliente al confirmar.'
+                : 'El lugar queda reservado sin afectar los cr\u00e9ditos del cliente (pago externo).';
+        }
+        syncToggleUI();
+        deductToggle.onchange = syncToggleUI;
+
+        const step1 = document.getElementById('adminBookStep1');
+        const step2 = document.getElementById('adminBookStep2');
+
+        // SEARCH
+        async function doSearch() {
+            const email = document.getElementById('adminBookEmail').value.trim();
+            if (!email) return showToast('Ingresa un email para buscar', 'error');
+            const searchBtn = document.getElementById('adminBookSearchBtn');
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const { data: profile, error } = await supabase.rpc('admin_search_user', { p_email: email });
+
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Buscar';
+
+            const searchResult = document.getElementById('adminBookSearchResult');
+            if (error || !profile) {
+                searchResult.innerHTML = `<div style="color:#e63946; font-size:0.82rem; padding:10px 14px; border-radius:8px;
+                    background:rgba(230,57,70,0.08); border:1px solid rgba(230,57,70,0.2);
+                    display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> No se encontr\u00f3 ning\u00fan usuario con ese email.
+                </div>`;
+                return;
+            }
+
+            foundClient = profile;
+            const displayName = profile.full_name || profile.nickname || profile.email_fallback;
+            const indoor = profile.credits_indoor ?? 0;
+            const train  = profile.credits_train  ?? 0;
+            const pilates= profile.credits_pilates?? 0;
+            const open   = profile.credits_open   ?? 0;
+            const total  = indoor + train + pilates + open;
+
+            searchResult.innerHTML = `
+                <div style="background:rgba(42,157,143,0.08); border:1px solid rgba(42,157,143,0.25);
+                    border-radius:10px; padding:12px; font-size:0.81rem;
+                    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                    <div>
+                        <div style="color:#fff; font-weight:700; font-size:0.9rem;">${displayName}</div>
+                        <div style="color:var(--text-muted); font-size:0.75rem;">${profile.email_fallback}</div>
+                        <div style="color:#2a9d8f; font-weight:600; margin-top:4px;">${total} cr&#233;dito(s) disponible(s)</div>
+                    </div>
+                    <button id="adminBookNextBtn" style="
+                        background:linear-gradient(135deg,var(--accent-gold),#b8902e);
+                        border:none; color:#1a1a2e; padding:9px 16px; border-radius:9px;
+                        font-family:inherit; font-weight:700; font-size:0.82rem; cursor:pointer;
+                        display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                        Continuar <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>`;
+
+            // Populate Step 2 client card
+            document.getElementById('adminBookClientCard').innerHTML = `
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                    <div style="width:38px; height:38px; border-radius:50%;
+                        background:linear-gradient(135deg,var(--accent-gold),#b8902e);
+                        display:flex; align-items:center; justify-content:center;
+                        color:#1a1a2e; font-size:1rem; font-weight:700; flex-shrink:0;">
+                        ${displayName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <div style="color:#fff; font-weight:700; font-size:0.9rem;">${displayName}</div>
+                        <div style="color:var(--text-muted); font-size:0.73rem;">${profile.email_fallback}</div>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.74rem;">
+                    <div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:7px;padding:6px;text-align:center;">
+                        <i class="fa-solid fa-bicycle" style="color:var(--accent-gold);"></i>
+                        <div style="font-weight:700;color:#fff;">${indoor}</div><div style="color:var(--text-muted);">Indoor</div>
+                    </div>
+                    <div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:7px;padding:6px;text-align:center;">
+                        <i class="fa-solid fa-dumbbell" style="color:var(--accent-gold);"></i>
+                        <div style="font-weight:700;color:#fff;">${train}</div><div style="color:var(--text-muted);">Train</div>
+                    </div>
+                    <div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:7px;padding:6px;text-align:center;">
+                        <i class="fa-solid fa-child-reaching" style="color:var(--accent-gold);"></i>
+                        <div style="font-weight:700;color:#fff;">${pilates}</div><div style="color:var(--text-muted);">Pilates</div>
+                    </div>
+                    <div style="background:rgba(42,157,143,0.08);border:1px solid rgba(42,157,143,0.2);border-radius:7px;padding:6px;text-align:center;">
+                        <i class="fa-solid fa-crown" style="color:#2a9d8f;"></i>
+                        <div style="font-weight:700;color:#2a9d8f;">${open}</div><div style="color:var(--text-muted);">VIP</div>
+                    </div>
+                </div>`;
+
+            document.getElementById('adminBookNextBtn').onclick = () => { step1.style.display = 'none'; step2.style.display = 'block'; };
+        }
+
+        document.getElementById('adminBookSearchBtn').onclick = doSearch;
+        document.getElementById('adminBookEmail').onkeydown = (e) => { if (e.key === 'Enter') doSearch(); };
+
+        // BACK
+        document.getElementById('adminBookBackBtn').onclick = () => { step2.style.display = 'none'; step1.style.display = 'block'; };
+
+        // CONFIRM
+        document.getElementById('adminBookConfirmBtn').onclick = async () => {
+            if (!foundClient) return;
+            const deductCredits = deductToggle.checked;
+            const displayName   = foundClient.full_name || foundClient.nickname || foundClient.email_fallback;
+            const confirmBtn    = document.getElementById('adminBookConfirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+
+            try {
+                const spotData = { spot: spotNum, userId: foundClient.id, displayName, bookedBy: currentUser.email };
+                const { error } = await supabase.rpc('admin_reserve_spot_v2', {
+                    p_class_id:       cls.id,
+                    p_user_id:        foundClient.id,
+                    p_admin_id:       currentUser.id,
+                    p_spot_data:      spotData,
+                    p_deduct_credits: deductCredits
+                });
+
+                if (error) {
+                    if (error.message.includes('cr\u00e9ditos')) {
+                        throw new Error('El cliente no tiene cr\u00e9ditos suficientes. Desactiva el descuento o asigna cr\u00e9ditos primero.');
+                    }
+                    throw error;
+                }
+
+                const creditMsg = deductCredits ? ' \u00b7 1 cr\u00e9dito descontado' : ' \u00b7 sin descuento de cr\u00e9dito';
+                showToast(`\u2713 Lugar #${spotNum} reservado para ${displayName}${creditMsg}`, 'success');
+                closeModal();
+                renderDailyClasses();
+
+            } catch (err) {
+                showToast(err.message, 'error');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Reserva';
+            }
+        };
+    }
 
     /* -----------------------------------------------
        13. ADMIN ROSTER MODAL — Physical Check-in
