@@ -56,7 +56,7 @@ const getChetumalDate = () => {
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     return new Date(utc + (3600000 * -5));
 };
-let selectedDateISO = getChetumalDate().toISOString().split('T')[0];
+let selectedDateISO = getISOFromDate(getChetumalDate());
 let selectedClassConfig = null;
 let inactiveDays = { weekdays: new Set(), specific: new Set() };
 let isSignupMode = false;
@@ -754,8 +754,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const currentMin = now.getHours() * 60 + now.getMinutes();
 
             const active = (data || []).filter(cls => {
-                let time = "00:00";
-                if (cls.note?.includes("[T:")) {
+                let time = cls.class_time || "00:00";
+                if (cls.note && cls.note.includes("[T:")) {
                     const m = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
                     if (m) time = m[1];
                 }
@@ -774,8 +774,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Sort and Render
             active.sort((a,b) => a.date.localeCompare(b.date)).forEach(cls => {
                 // ... (rendering logic remains similar but cleaned up)
-                let time = "00:00";
-                if (cls.note?.includes("[T:")) {
+                let time = cls.class_time || "00:00";
+                if (cls.note && cls.note.includes("[T:")) {
                     const m = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
                     if (m) time = m[1];
                 }
@@ -1602,11 +1602,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const seenSlots = new Set(); // For de-duplication safety
         const dayClassesRaw = rawClasses
             .map(cls => {
-                let time = "00:00";
-                let hasValidTime = false;
+                let time = cls.class_time || "00:00";
+                let hasValidTime = !!cls.class_time;
                 let displayNote = cls.note || "";
 
-                if (cls.note && cls.note.startsWith("[T:")) {
+                if (cls.note && cls.note.includes("[T:")) {
                     const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
                     if (match) {
                         time = match[1];
