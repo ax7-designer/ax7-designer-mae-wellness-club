@@ -2851,3 +2851,44 @@ button {
     transform: scale(1.1);
 }
 
+/* ==========================================
+   TESTIMONIALS & ANIMATIONS (Added specifically for UI refinement)
+   ========================================== */
+
+/* Testimonial text centering */
+.testimonial-card {
+    text-align: center;
+}
+.testimonial-author {
+    justify-content: center; /* Since it might be a flexbox */
+}
+
+/* Hesitant typing animation for 'Mae' */
+.typing-mae {
+    display: inline-block;
+    overflow: hidden; 
+    white-space: nowrap; 
+    border-right: .12em solid var(--accent-gold); 
+    /* The animation steps allow us to pause at certain characters to simulate hesitation */
+    animation: 
+        typing-hesitant 3.5s steps(20, end) infinite,
+        blink-caret .8s step-end infinite;
+    vertical-align: bottom;
+    padding-right: 4px; /* Space for the caret */
+}
+
+@keyframes typing-hesitant {
+    0% { max-width: 0; }
+    20% { max-width: 1ch; } /* Types 'M' */
+    40% { max-width: 1ch; } /* Hesitates */
+    55% { max-width: 2ch; } /* Types 'a' */
+    65% { max-width: 2ch; } /* Hesitates slightly */
+    80% { max-width: 3ch; } /* Types 'e' */
+    100% { max-width: 100%; } /* Finishes and holds */
+}
+
+@keyframes blink-caret {
+    from, to { border-color: transparent }
+    50% { border-color: var(--accent-gold); }
+}
+
