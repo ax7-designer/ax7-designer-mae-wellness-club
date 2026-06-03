@@ -116,29 +116,29 @@ BEGIN
   END IF;
 
   -- Lockear perfil
-  SELECT id INTO v_old_credits FROM profiles WHERE id = p_user_id FOR UPDATE;
+  PERFORM 1 FROM profiles WHERE id = p_user_id FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Usuario no encontrado: %', p_user_id;
   END IF;
 
   -- Actualizar columna correcta
   IF p_credit_type = 'indoor' THEN
-    SELECT credits_indoor INTO v_old_credits FROM profiles WHERE id = p_user_id;
+    SELECT COALESCE(credits_indoor, 0) INTO v_old_credits FROM profiles WHERE id = p_user_id;
     v_new_credits := v_old_credits + p_amount;
     UPDATE profiles SET credits_indoor = v_new_credits WHERE id = p_user_id;
 
   ELSIF p_credit_type = 'train' THEN
-    SELECT credits_train INTO v_old_credits FROM profiles WHERE id = p_user_id;
+    SELECT COALESCE(credits_train, 0) INTO v_old_credits FROM profiles WHERE id = p_user_id;
     v_new_credits := v_old_credits + p_amount;
     UPDATE profiles SET credits_train = v_new_credits WHERE id = p_user_id;
 
   ELSIF p_credit_type = 'pilates' THEN
-    SELECT credits_pilates INTO v_old_credits FROM profiles WHERE id = p_user_id;
+    SELECT COALESCE(credits_pilates, 0) INTO v_old_credits FROM profiles WHERE id = p_user_id;
     v_new_credits := v_old_credits + p_amount;
     UPDATE profiles SET credits_pilates = v_new_credits WHERE id = p_user_id;
 
   ELSE -- 'open'
-    SELECT credits_open INTO v_old_credits FROM profiles WHERE id = p_user_id;
+    SELECT COALESCE(credits_open, 0) INTO v_old_credits FROM profiles WHERE id = p_user_id;
     v_new_credits := v_old_credits + p_amount;
     UPDATE profiles SET credits_open = v_new_credits WHERE id = p_user_id;
   END IF;

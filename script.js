@@ -1,4 +1,7 @@
-import { supabase } from './supabaseClient.js';
+import { supabase } from './src/shared/supabaseClient.js';
+import { ADMIN_EMAILS, isAdmin } from './src/auth/admin.js';
+import { DISCIPLINE_CAPACITY, DISCIPLINE_ICONS } from './src/credits/creditRules.js';
+import * as reservationService from './src/reservations/reservationService.js';
 import pilatesImgUrl from './pilates_deseada.jpg';
 import trainImgUrl from './train_deseada.jpg';
 import indoorImgUrl from './indoor_deseada.jpg';
@@ -7,8 +10,6 @@ import logoImgUrl from './mae_logo.png';
 /* ============================================================
    CONSTANTS
    ============================================================ */
-const ADMIN_EMAILS = ['jesuscomtreras.666@gmail.com', 'guemesana12@gmail.com', 'alexis.septem@gmail.com'];
-
 const AVATAR_ICON_MAP = {
     bolt: 'fa-bolt',
     fire: 'fa-fire',
@@ -24,18 +25,6 @@ const AVATAR_ICON_MAP = {
     gem: 'fa-gem',
 };
 
-const DISCIPLINE_CAPACITY = {
-    'Train': 8,
-    'Indoor Cycling': 11,
-    'Pilates': 4
-};
-
-const DISCIPLINE_ICONS = {
-    'Pilates': 'fa-child-reaching',
-    'Train': 'fa-dumbbell',
-    'Indoor Cycling': 'fa-bicycle'
-};
-
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const DISCIPLINE_IMAGES = {
@@ -49,14 +38,34 @@ const DISCIPLINE_IMAGES = {
    ============================================================ */
 let currentUser = null;
 let selectedAvatar = 'bolt';
+
+// Restore active filter preference from cache
 let activeDisciplineFilter = 'all';
+try {
+    const cachedFilter = localStorage.getItem('mae_discipline_filter');
+    if (cachedFilter) activeDisciplineFilter = cachedFilter;
+} catch (e) {
+    console.warn("Error restoring active filter preference", e);
+}
+
 // Get initial date in Chetumal (UTC-5)
 const getChetumalDate = () => {
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     return new Date(utc + (3600000 * -5));
 };
+
+// Restore last viewed date preference from cache (must not be in the past)
 let selectedDateISO = getISOFromDate(getChetumalDate());
+try {
+    const cachedDate = localStorage.getItem('mae_last_date');
+    if (cachedDate && cachedDate >= selectedDateISO) {
+        selectedDateISO = cachedDate;
+    }
+} catch (e) {
+    console.warn("Error restoring last viewed date preference", e);
+}
+
 let selectedClassConfig = null;
 let inactiveDays = { weekdays: new Set(), specific: new Set() };
 let isSignupMode = false;
@@ -77,9 +86,6 @@ async function safeGetSession() {
     return _refreshPromise;
 }
 
-function isAdmin(user) {
-    return user && ADMIN_EMAILS.includes(user.email);
-}
 
 function showToast(message, type = 'success') {
     const existing = document.getElementById('siteToast');
@@ -169,6 +175,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const scCoachName = document.getElementById('scCoachName');
     const scCoachDiscipline = document.getElementById('scCoachDiscipline');
     const scCoachNote = document.getElementById('scCoachNote');
+
+    /* ------- Immediate UI Restorations from Cache ------- */
+    const cachedUserStr = localStorage.getItem('mae_cached_user');
+    if (cachedUserStr && loginBtn) {
+        try {
+            const cachedUser = JSON.parse(cachedUserStr);
+            if (cachedUser && cachedUser.name) {
+                const iconClass = AVATAR_ICON_MAP[cachedUser.avatar] || 'fa-bolt';
+                const adminTag = cachedUser.isAdmin
+                    ? `<span class="admin-badge-nav"><i class="fa-solid fa-shield-halved"></i> Admin</span>`
+                    : '';
+                loginBtn.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span class="action-text">Hola, ${cachedUser.name}</span>${adminTag}`;
+            }
+        } catch (e) {
+            console.warn("Error reading cached user", e);
+        }
+    }
 
     /* -----------------------------------------------
        0. ATTACH LISTENERS IMMEDIATELY
@@ -269,6 +292,10 @@ document.addEventListener('DOMContentLoaded', async () => {
        1.5 DISCIPLINE FILTERS
     ----------------------------------------------- */
     const filterButtons = document.querySelectorAll('.filter-btn');
+    if (activeDisciplineFilter !== 'all') {
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.filter-btn[data-filter="${activeDisciplineFilter}"]`)?.classList.add('active');
+    }
     filterButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const isAlreadyActive = btn.classList.contains('active');
@@ -281,6 +308,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 btn.classList.add('active');
                 activeDisciplineFilter = btn.dataset.filter;
+            }
+            try {
+                localStorage.setItem('mae_discipline_filter', activeDisciplineFilter);
+            } catch (e) {
+                console.warn("Error saving active discipline filter preference", e);
             }
             renderDailyClasses();
         });
@@ -818,11 +850,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!confirm(`¿Estás seguro de cancelar tu lugar en la clase de ${cls.discipline}? Se te devolverá 1 crédito.`)) return;
 
         try {
-            const { error } = await supabase.rpc('cancel_reservation_v2', {
-                p_class_id: cls.id,
-                p_user_id: currentUser.id,
-                p_spot: 0 // Not strictly needed by the RPC logic but kept for param safety if needed
-            });
+            const { error } = await reservationService.cancelReservation(cls.id, currentUser.id);
 
             if (error) throw error;
 
@@ -879,8 +907,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (user) {
             // Priority: Table profile > Meta > Derived from email
             const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            if (profile) {
+                user.role = profile.role;
+            }
             const nickname = profile?.nickname || user.user_metadata?.nickname || user.email.split('@')[0];
             const avatar = profile?.avatar || user.user_metadata?.avatar || 'bolt';
+
+            // Cache user data for FCP instant paint (Soft Login)
+            try {
+                localStorage.setItem('mae_cached_user', JSON.stringify({
+                    name: nickname,
+                    email: user.email,
+                    avatar: avatar,
+                    isAdmin: isAdmin(user)
+                }));
+            } catch (e) {
+                console.warn("Error caching user session", e);
+            }
 
             // Auto-filter by preference if not already set manually
             if (profile?.preferred_discipline && profile.preferred_discipline !== 'all' && (activeDisciplineFilter === 'all' || activeDisciplineFilter === undefined)) {
@@ -908,6 +951,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 link.href = url.toString();
             });
         } else {
+            // Remove cached user data on logout
+            try {
+                localStorage.removeItem('mae_cached_user');
+            } catch (e) {
+                console.warn("Error clearing cached user session", e);
+            }
+
             loginBtn.innerHTML = `<i class="fa-regular fa-user"></i> <span class="action-text">Iniciar Sesión</span>`;
             if (addAdminClassBtn) addAdminClassBtn.style.display = 'none';
             if (addInactiveDayBtn) addInactiveDayBtn.style.display = 'none';
@@ -1313,10 +1363,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
 
             if (!inactive) {
+                if (thisISO === selectedDateISO && selectedDateDisplay) {
+                    selectedDateDisplay.textContent = i === 0 ? 'Clases de Hoy' : `Clases del ${dateNum} — ${dayName}`;
+                }
                 pill.addEventListener('click', () => {
                     document.querySelectorAll('.date-pill').forEach(p => p.classList.remove('active'));
                     pill.classList.add('active');
                     selectedDateISO = thisISO;
+                    try {
+                        localStorage.setItem('mae_last_date', thisISO);
+                    } catch (e) {
+                        console.warn("Error caching last viewed date", e);
+                    }
                     if (selectedDateDisplay) {
                         selectedDateDisplay.textContent = i === 0 ? 'Clases de Hoy' : `Clases del ${dateNum} — ${dayName}`;
                     }
@@ -1326,8 +1384,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 pill.setAttribute('title', 'Día inactivo');
             }
 
-            dateScrollContainer.appendChild(pill);
         }
+
+        // Auto-scroll the active pill into view so it's visible on load
+        setTimeout(() => {
+            const activePill = dateScrollContainer.querySelector('.date-pill.active');
+            if (activePill) {
+                activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }, 100);
     }
 
     // Initialize date pills if not already done by the init flow
@@ -1570,7 +1635,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /* -----------------------------------------------
-       11. RENDER DAILY CLASSES
+       11. RENDER DAILY CLASSES (Stale-While-Revalidate)
     ----------------------------------------------- */
     async function renderDailyClasses() {
         if (!dailyClassesList) return;
@@ -1584,176 +1649,225 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        dailyClassesList.innerHTML = '<p style="text-align:center;color:var(--accent-gold);"><i class="fa-solid fa-spinner fa-spin"></i> Cargando clases...</p>';
-        if (selectedClassProfile) selectedClassProfile.style.display = 'none';
-        if (spotsGrid) spotsGrid.innerHTML = '';
+        const cacheKey = 'mae_classes_' + selectedDateISO;
+        const cachedDataStr = localStorage.getItem(cacheKey);
+        let cachedRaw = null;
+        let didRenderFromCache = false;
 
-        const { data: rawClasses, error } = await supabase
-            .from('classes').select('*').eq('date', selectedDateISO);
-
-        if (error) { dailyClassesList.innerHTML = `<p style="color:#ff5555;">Error: ${error.message}</p>`; return; }
-
-        if (!rawClasses || rawClasses.length === 0) {
-            dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;">No hay clases programadas para este día.</p>`;
-            return;
+        if (cachedDataStr) {
+            try {
+                cachedRaw = JSON.parse(cachedDataStr);
+                if (Array.isArray(cachedRaw)) {
+                    doRender(cachedRaw);
+                    didRenderFromCache = true;
+                }
+            } catch (e) {
+                console.warn("Error parsing cached classes", e);
+            }
         }
 
-        // 1. Process, Filter and Sort classes
-        const seenSlots = new Set(); // For de-duplication safety
-        const dayClassesRaw = rawClasses
-            .map(cls => {
-                let time = cls.class_time || "00:00";
-                let hasValidTime = !!cls.class_time;
-                let displayNote = cls.note || "";
+        if (!didRenderFromCache) {
+            dailyClassesList.innerHTML = '<p style="text-align:center;color:var(--accent-gold);"><i class="fa-solid fa-spinner fa-spin"></i> Cargando clases...</p>';
+            if (selectedClassProfile) selectedClassProfile.style.display = 'none';
+            if (spotsGrid) spotsGrid.innerHTML = '';
+        }
 
-                if (cls.note && cls.note.includes("[T:")) {
-                    const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
-                    if (match) {
-                        time = match[1];
-                        displayNote = cls.note.replace(match[0], "");
-                        hasValidTime = true;
+        // Fetch from Supabase in the background
+        try {
+            const { data: rawClasses, error } = await supabase
+                .from('classes').select('*').eq('date', selectedDateISO);
+
+            if (error) {
+                if (!didRenderFromCache) {
+                    dailyClassesList.innerHTML = `<p style="color:#ff5555;">Error: ${error.message}</p>`;
+                }
+                return;
+            }
+
+            const rawClassesStr = JSON.stringify(rawClasses);
+            const cachedRawStr = cachedRaw ? JSON.stringify(cachedRaw) : null;
+
+            // If different or wasn't rendered yet, render and update cache
+            if (!didRenderFromCache || rawClassesStr !== cachedRawStr) {
+                doRender(rawClasses);
+                localStorage.setItem(cacheKey, rawClassesStr);
+            }
+        } catch (err) {
+            console.error("Fetch classes error:", err);
+            if (!didRenderFromCache) {
+                dailyClassesList.innerHTML = `<p style="color:#ff5555;">Error de conexión</p>`;
+            }
+        }
+
+        // Internal rendering method containing the original processing and DOM creation
+        function doRender(classesArray) {
+            if (!classesArray || classesArray.length === 0) {
+                dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;">No hay clases programadas para este día.</p>`;
+                if (selectedClassProfile) selectedClassProfile.style.display = 'none';
+                if (spotsGrid) spotsGrid.innerHTML = '';
+                return;
+            }
+
+            // 1. Process, Filter and Sort classes
+            const seenSlots = new Set(); // For de-duplication safety
+            const dayClassesRaw = classesArray
+                .map(cls => {
+                    let time = cls.class_time || "00:00";
+                    let hasValidTime = !!cls.class_time;
+                    let displayNote = cls.note || "";
+
+                    if (cls.note && cls.note.includes("[T:")) {
+                        const match = cls.note.match(/\[T:(\d{2}:\d{2})\]/);
+                        if (match) {
+                            time = match[1];
+                            displayNote = cls.note.replace(match[0], "");
+                            hasValidTime = true;
+                        }
                     }
+
+                    const [hh, mm] = time.split(':').map(Number);
+                    const hour12 = hh % 12 || 12;
+                    const ampm = hh >= 12 ? 'PM' : 'AM';
+                    const time12 = `${hour12}:${String(mm).padStart(2, '0')} ${ampm}`;
+                    const isPM = hh >= 12;
+
+                    return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm, hasValidTime };
+                })
+                .filter(cls => {
+                    if (!cls.hasValidTime) return false;
+                    const dayNum = d.getDay();
+                    // Saturday Guard: Only 8:00 AM
+                    if (dayNum === 6 && cls.time !== "08:00") return false;
+                    // Sunday Guard: Closed
+                    if (dayNum === 0) return false;
+                    return true;
+                });
+
+            // 1.5. Filter out past classes for today (with 10min grace period)
+            const nowChetumal = getChetumalDate();
+            const currentMinutes = nowChetumal.getHours() * 60 + nowChetumal.getMinutes();
+            const todayISO = getISOFromDate(nowChetumal);
+            const GRACE_PERIOD = 10;
+
+            const dayClasses = dayClassesRaw
+                .sort((a, b) => {
+                    if (a.sortVal !== b.sortVal) return a.sortVal - b.sortVal;
+                    const aCount = Array.isArray(a.occupied_spots) ? a.occupied_spots.length : 0;
+                    const bCount = Array.isArray(b.occupied_spots) ? b.occupied_spots.length : 0;
+                    if (aCount !== bCount) return bCount - aCount;
+                    return a.id - b.id;
+                })
+                .filter(cls => {
+                    const key = `${cls.discipline}_${cls.time}`;
+                    if (seenSlots.has(key)) return false;
+                    seenSlots.add(key);
+                    return true;
+                })
+                .map(cls => {
+                    const isPast = (selectedDateISO === todayISO) && (cls.sortVal < currentMinutes - GRACE_PERIOD);
+                    return { ...cls, isPast };
+                })
+                .filter(cls => {
+                    if (!isAdmin(currentUser) && cls.isPast) return false;
+                    return activeDisciplineFilter === 'all' || cls.discipline === activeDisciplineFilter;
+                });
+
+            // 2. Clear DOM classes list and draw cards
+            dailyClassesList.innerHTML = '';
+            if (dayClasses.length === 0) {
+                let emptyMsg = "No hay clases disponibles para estos criterios.";
+                if (selectedDateISO === todayISO && activeDisciplineFilter === 'all') {
+                    emptyMsg = "¡Todas las clases de hoy han terminado! Nos vemos mañana para seguir dándolo todo. ✨";
+                }
+                dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;margin-top:20px;padding: 0 20px;line-height:1.5;">${emptyMsg}</p>`;
+                return;
+            }
+
+            let currentGroup = null;
+            let lastSortVal = null;
+
+            dayClasses.forEach(cls => {
+                const group = cls.isPM ? 'Vespertino' : 'Matutino';
+
+                if (group !== currentGroup) {
+                    currentGroup = group;
+                    const header = document.createElement('div');
+                    header.className = 'session-group-header';
+                    header.innerHTML = `<span>${group}</span>`;
+                    dailyClassesList.appendChild(header);
+                } else if (lastSortVal !== null && lastSortVal !== cls.sortVal) {
+                    const spacer = document.createElement('div');
+                    spacer.className = 'time-slot-spacer';
+                    dailyClassesList.appendChild(spacer);
+                }
+                lastSortVal = cls.sortVal;
+
+                const occupied = cls.occupied_spots || [];
+                const freeCount = cls.capacity - occupied.length;
+                const card = document.createElement('div');
+                const isActive = selectedClassConfig && selectedClassConfig.id === cls.id;
+                card.className = `daily-class-card ${cls.isPast ? 'past' : ''} ${isActive ? 'active' : ''}`;
+                const discIcon = DISCIPLINE_ICONS[cls.discipline] || 'fa-star';
+                card.innerHTML = `
+                    <div class="daily-class-time-tag">${cls.time12}</div>
+                    <div class="daily-class-info">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <i class="fa-solid ${discIcon}" style="color:var(--accent-gold); font-size:1.1rem; width:20px; text-align:center;"></i>
+                            <h4 style="margin:0;">${cls.discipline}</h4>
+                        </div>
+                        <p class="coach-name-item" style="display: none;"><i class="fa-solid fa-user"></i> Coach ${cls.coach_name}</p>
+                    </div>
+                    <div class="daily-class-meta">
+                        <span class="spots-badge">${freeCount} lugares libres</span>
+                        ${isAdmin(currentUser) ? `
+                            <button class="roster-btn" title="Pase de lista" style="background:rgba(201,169,110,0.12); border:1px solid rgba(201,169,110,0.3); color:var(--accent-gold); cursor:pointer; padding:5px 10px; border-radius:6px; margin-left:6px; font-size:0.75rem;">
+                                <i class="fa-solid fa-clipboard-list"></i>
+                            </button>
+                            <button class="delete-class-btn" title="Eliminar clase" style="background:none; border:none; color:#e63946; cursor:pointer; padding:5px; margin-left:4px;">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>` : ''}
+                        <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:0.8rem; margin-left:10px;"></i>
+                    </div>`;
+
+                const delBtn = card.querySelector('.delete-class-btn');
+                if (delBtn) {
+                    delBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (confirm(`¿Estás seguro de eliminar la clase de ${cls.discipline}?`)) {
+                            const { error } = await supabase.from('classes').delete().eq('id', cls.id);
+                            if (error) showToast(`Error al eliminar: ${error.message}`, 'error');
+                            else { showToast('✓ Clase eliminada'); renderDailyClasses(); }
+                        }
+                    });
                 }
 
-                const [hh, mm] = time.split(':').map(Number);
-                const hour12 = hh % 12 || 12;
-                const ampm = hh >= 12 ? 'PM' : 'AM';
-                const time12 = `${hour12}:${String(mm).padStart(2, '0')} ${ampm}`;
-                const isPM = hh >= 12;
+                const rosterBtn = card.querySelector('.roster-btn');
+                if (rosterBtn) {
+                    rosterBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showRosterModal(cls);
+                    });
+                }
 
-                return { ...cls, time, time12, isPM, displayNote, sortVal: hh * 60 + mm, hasValidTime };
-            })
-            .filter(cls => {
-                if (!cls.hasValidTime) return false;
-                const dayNum = d.getDay();
-                // Saturday Guard: Only 8:00 AM
-                if (dayNum === 6 && cls.time !== "08:00") return false;
-                // Sunday Guard: Closed
-                if (dayNum === 0) return false;
-                return true;
+                card.addEventListener('click', async () => {
+                    document.querySelectorAll('.daily-class-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                    await showClassDetails(cls);
+                });
+                dailyClassesList.appendChild(card);
             });
 
-        // 1.5. Filter out past classes for today (with 10min grace period)
-        const nowChetumal = getChetumalDate();
-        const currentMinutes = nowChetumal.getHours() * 60 + nowChetumal.getMinutes();
-        const todayISO = getISOFromDate(nowChetumal);
-        const GRACE_PERIOD = 10;
-
-        const dayClasses = dayClassesRaw
-            .sort((a, b) => {
-                // Primary Sort: By time
-                if (a.sortVal !== b.sortVal) return a.sortVal - b.sortVal;
-
-                // Secondary Sort (STABILITY): Ensuring all users see the SAME record for a slot.
-                const aCount = Array.isArray(a.occupied_spots) ? a.occupied_spots.length : 0;
-                const bCount = Array.isArray(b.occupied_spots) ? b.occupied_spots.length : 0;
-
-                if (aCount !== bCount) return bCount - aCount;
-                return a.id - b.id;
-            })
-            .filter(cls => {
-                const key = `${cls.discipline}_${cls.time}`;
-                if (seenSlots.has(key)) return false;
-                seenSlots.add(key);
-                return true;
-            })
-            .map(cls => {
-                const isPast = (selectedDateISO === todayISO) && (cls.sortVal < currentMinutes - GRACE_PERIOD);
-                return { ...cls, isPast };
-            })
-            .filter(cls => {
-                // Regular users don't see past classes
-                if (!isAdmin(currentUser) && cls.isPast) return false;
-                
-                // Active discipline filter
-                return activeDisciplineFilter === 'all' || cls.discipline === activeDisciplineFilter;
-            });
-
-        // 2. Clear loader and Prepare groups
-        dailyClassesList.innerHTML = '';
-        if (dayClasses.length === 0) {
-            let emptyMsg = "No hay clases disponibles para estos criterios.";
-            if (selectedDateISO === todayISO && activeDisciplineFilter === 'all') {
-                emptyMsg = "¡Todas las clases de hoy han terminado! Nos vemos mañana para seguir dándolo todo. ✨";
-            }
-            dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;margin-top:20px;padding: 0 20px;line-height:1.5;">${emptyMsg}</p>`;
-            return;
-        }
-
-        let currentGroup = null; // 'Matutino' or 'Vespertino'
-        let lastSortVal = null;
-
-        dayClasses.forEach(cls => {
-            const group = cls.isPM ? 'Vespertino' : 'Matutino';
-
-            // Add group header if changed
-            if (group !== currentGroup) {
-                currentGroup = group;
-                const header = document.createElement('div');
-                header.className = 'session-group-header';
-                header.innerHTML = `<span>${group}</span>`;
-                dailyClassesList.appendChild(header);
-            } else if (lastSortVal !== null && lastSortVal !== cls.sortVal) {
-                // Add spacer between different hours within same group
-                const spacer = document.createElement('div');
-                spacer.className = 'time-slot-spacer';
-                dailyClassesList.appendChild(spacer);
-            }
-            lastSortVal = cls.sortVal;
-
-            const occupied = cls.occupied_spots || [];
-            const freeCount = cls.capacity - occupied.length;
-            const card = document.createElement('div');
-            card.className = `daily-class-card ${cls.isPast ? 'past' : ''}`;
-            const discIcon = DISCIPLINE_ICONS[cls.discipline] || 'fa-star';
-            card.innerHTML = `
-                <div class="daily-class-time-tag">${cls.time12}</div>
-                <div class="daily-class-info">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <i class="fa-solid ${discIcon}" style="color:var(--accent-gold); font-size:1.1rem; width:20px; text-align:center;"></i>
-                        <h4 style="margin:0;">${cls.discipline}</h4>
-                    </div>
-                    <p class="coach-name-item" style="display: none;"><i class="fa-solid fa-user"></i> Coach ${cls.coach_name}</p>
-                </div>
-                <div class="daily-class-meta">
-                    <span class="spots-badge">${freeCount} lugares libres</span>
-                    ${isAdmin(currentUser) ? `
-                        <button class="roster-btn" title="Pase de lista" style="background:rgba(201,169,110,0.12); border:1px solid rgba(201,169,110,0.3); color:var(--accent-gold); cursor:pointer; padding:5px 10px; border-radius:6px; margin-left:6px; font-size:0.75rem;">
-                            <i class="fa-solid fa-clipboard-list"></i>
-                        </button>
-                        <button class="delete-class-btn" title="Eliminar clase" style="background:none; border:none; color:#e63946; cursor:pointer; padding:5px; margin-left:4px;">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>` : ''}
-                    <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:0.8rem; margin-left:10px;"></i>
-                </div>`;
-
-            const delBtn = card.querySelector('.delete-class-btn');
-            if (delBtn) {
-                delBtn.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    if (confirm(`¿Estás seguro de eliminar la clase de ${cls.discipline}?`)) {
-                        const { error } = await supabase.from('classes').delete().eq('id', cls.id);
-                        if (error) showToast(`Error al eliminar: ${error.message}`, 'error');
-                        else { showToast('✓ Clase eliminada'); renderDailyClasses(); }
+            // Update details view silently if active
+            if (selectedClassConfig) {
+                const freshConfig = classesArray.find(c => c.id === selectedClassConfig.id);
+                if (freshConfig) {
+                    selectedClassConfig = freshConfig;
+                    if (selectedClassProfile && selectedClassProfile.style.display === 'block') {
+                        renderSpotsGrid(freshConfig);
                     }
-                });
+                }
             }
-
-            const rosterBtn = card.querySelector('.roster-btn');
-            if (rosterBtn) {
-                rosterBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    showRosterModal(cls);
-                });
-            }
-
-            card.addEventListener('click', async () => {
-                document.querySelectorAll('.daily-class-card').forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-                await showClassDetails(cls);
-            });
-            dailyClassesList.appendChild(card);
-        });
+        }
     }
 
     async function showClassDetails(cls) {
@@ -1859,11 +1973,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 // ATOMIC RESERVATION via RPC
                 const spotData = { spot: pendingSpot, userId: currentUser.id, displayName };
-                const { error } = await supabase.rpc('reserve_spot_v2', {
-                    p_class_id: pendingCls.id,
-                    p_user_id: currentUser.id,
-                    p_spot_data: spotData
-                });
+                const { error } = await reservationService.bookReservation(
+                    pendingCls.id,
+                    currentUser.id,
+                    spotData
+                );
 
                 if (error) {
                     if (error.message.includes('ocupado')) throw new Error('Este lugar ya fue tomado por otra persona.');
@@ -2254,13 +2368,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 const spotData = { spot: spotNum, userId: foundClient.id, displayName, bookedBy: currentUser.email };
-                const { error } = await supabase.rpc('admin_reserve_spot_v2', {
-                    p_class_id:       cls.id,
-                    p_user_id:        foundClient.id,
-                    p_admin_id:       currentUser.id,
-                    p_spot_data:      spotData,
-                    p_deduct_credits: deductCredits
-                });
+                const { error } = await reservationService.adminBookReservation(
+                    cls.id,
+                    foundClient.id,
+                    currentUser.id,
+                    spotData,
+                    deductCredits
+                );
 
                 if (error) {
                     if (error.message.includes('cr\u00e9ditos')) {
