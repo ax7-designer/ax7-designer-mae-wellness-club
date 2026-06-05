@@ -193,13 +193,14 @@ export function initClassController(state, controllers) {
             const todayISO = getISOFromDate(nowChetumal);
             const GRACE_PERIOD = 10;
 
+            const disciplinePriority = { 'Pilates': 1, 'Train': 2, 'Indoor Cycling': 3 };
             const dayClasses = dayClassesRaw
                 .sort((a, b) => {
                     if (a.sortVal !== b.sortVal) return a.sortVal - b.sortVal;
-                    const aCount = Array.isArray(a.occupied_spots) ? a.occupied_spots.length : 0;
-                    const bCount = Array.isArray(b.occupied_spots) ? b.occupied_spots.length : 0;
-                    if (aCount !== bCount) return bCount - aCount;
-                    return a.id - b.id;
+                    const priorityA = disciplinePriority[a.discipline] || 99;
+                    const priorityB = disciplinePriority[b.discipline] || 99;
+                    if (priorityA !== priorityB) return priorityA - priorityB;
+                    return 0;
                 })
                 .filter(cls => {
                     const key = `${cls.discipline}_${cls.time}`;
