@@ -76,6 +76,7 @@ export function initClassController(state, controllers) {
             } else {
                 pill.setAttribute('title', 'Día inactivo');
             }
+            dateScrollContainer.appendChild(pill);
         }
 
         // Auto-scroll the active pill into view
