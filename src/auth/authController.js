@@ -186,6 +186,7 @@ export function initAuthController(state, controllers) {
             const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
             if (profile) {
                 user.role = profile.role;
+                checkAnnouncement(user, profile);
             }
             const nickname = profile?.nickname || user.user_metadata?.nickname || user.email.split('@')[0];
             const avatar = profile?.avatar || user.user_metadata?.avatar || 'bolt';
@@ -609,6 +610,205 @@ export function initAuthController(state, controllers) {
             updateAuthUI(null);
         }
     });
+
+    async function checkAnnouncement(user, profile) {
+        if (!user || !profile) return;
+        const version = '1.06';
+        const storageKey = `mae_announcement_seen_${version}`;
+        if (localStorage.getItem(storageKey) === 'true') return;
+
+        const isUserAdmin = isAdmin(user);
+        const totalCredits = (profile.credits_indoor || 0) + (profile.credits_train || 0) + (profile.credits_pilates || 0) + (profile.credits_open || 0);
+        const prefersPilates = profile.preferred_discipline === 'Pilates';
+
+        let hasPilatesHistory = false;
+        if (totalCredits > 0 && !prefersPilates && !isUserAdmin) {
+            try {
+                const { data: userClasses } = await supabase
+                    .from('classes')
+                    .select('discipline')
+                    .filter('occupied_spots', 'cs', JSON.stringify([{ userId: user.id }]));
+                hasPilatesHistory = (userClasses || []).some(c => c.discipline === 'Pilates');
+            } catch (e) {
+                console.warn("Error checking Pilates history", e);
+            }
+        }
+
+        const shouldShow = isUserAdmin || (totalCredits > 0 && (prefersPilates || hasPilatesHistory));
+        if (shouldShow) {
+            showAnnouncementModal(storageKey);
+        }
+    }
+
+    function showAnnouncementModal(storageKey) {
+        const existing = document.getElementById('maeAnnouncementModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'maeAnnouncementModal';
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '100000';
+        modal.style.backdropFilter = 'blur(12px)';
+        modal.style.background = 'rgba(0, 0, 0, 0.78)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.position = 'fixed';
+        modal.style.inset = '0';
+        modal.style.opacity = '0';
+        modal.style.transition = 'opacity 0.3s ease';
+
+        modal.innerHTML = `
+            <div class="modal-content" style="
+                max-width: 480px;
+                width: 90%;
+                background: linear-gradient(135deg, rgba(25, 25, 35, 0.95), rgba(15, 15, 25, 0.98));
+                border: 1px solid rgba(201, 169, 110, 0.25);
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                border-radius: 20px;
+                padding: 32px;
+                text-align: center;
+                position: relative;
+                transform: scale(0.9);
+                opacity: 0;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            ">
+                <button id="closeAnnouncementBtn" style="
+                    position: absolute;
+                    top: 16px;
+                    right: 18px;
+                    background: transparent;
+                    border: none;
+                    color: rgba(255, 255, 255, 0.4);
+                    font-size: 1.8rem;
+                    cursor: pointer;
+                    line-height: 1;
+                    transition: color 0.2s;
+                " aria-label="Cerrar">&times;</button>
+                
+                <div style="margin-bottom: 20px;">
+                    <div style="
+                        width: 64px;
+                        height: 64px;
+                        background: rgba(201, 169, 110, 0.1);
+                        border: 1px solid rgba(201, 169, 110, 0.3);
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin: 0 auto 12px;
+                        color: var(--accent-gold);
+                        font-size: 1.8rem;
+                    ">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </div>
+                    <span style="
+                        font-size: 0.72rem;
+                        color: var(--accent-gold);
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 2px;
+                    ">Noticia de Programación</span>
+                    <h2 style="
+                        color: #fff;
+                        font-size: 1.6rem;
+                        font-weight: 800;
+                        margin: 8px 0 0;
+                        letter-spacing: -0.5px;
+                    ">Aviso de Horarios</h2>
+                </div>
+
+                <div style="
+                    color: var(--text-muted);
+                    font-size: 0.92rem;
+                    line-height: 1.6;
+                    text-align: left;
+                    margin-bottom: 24px;
+                    background: rgba(255, 255, 255, 0.02);
+                    border: 1px solid rgba(255, 255, 255, 0.05);
+                    border-radius: 12px;
+                    padding: 18px;
+                ">
+                    <p style="margin: 0 0 12px; color: #fff; font-weight: 600;">Querida comunidad MAE,</p>
+                    <p style="margin: 0 0 12px;">
+                        Para brindarles mayor comodidad y adaptabilidad en su rutina de fin de semana, les informamos que a partir de este <strong style="color: #fff;">sábado 6 de junio</strong>, todas nuestras clases sabatinas se recorrerán una hora más tarde.
+                    </p>
+                    <div style="
+                        background: rgba(201, 169, 110, 0.08);
+                        border-left: 3px solid var(--accent-gold);
+                        padding: 10px 14px;
+                        margin: 14px 0;
+                        border-radius: 0 8px 8px 0;
+                    ">
+                        <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-gold); font-weight: 700; display: block; margin-bottom: 2px;">Nuevo Horario de Sábados</span>
+                        <strong style="color: #fff; font-size: 1rem;">9:00 AM</strong> 
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">(En lugar de las 8:00 AM)</span>
+                    </div>
+                    <p style="margin: 0; font-size: 0.88rem; color: var(--text-muted);">
+                        Si ya contabas con una reserva activa para este sábado, no te preocupes: <strong style="color: #fff;">tu lugar ha sido reasignado automáticamente</strong> a las 9:00 AM. ¡Nos vemos en el estudio para seguir dando el máximo!
+                    </p>
+                </div>
+
+                <button id="ackAnnouncementBtn" style="
+                    width: 100%;
+                    background: linear-gradient(135deg, var(--accent-gold), #b8902e);
+                    border: none;
+                    color: #1a1a2e;
+                    padding: 14px;
+                    border-radius: 12px;
+                    font-family: inherit;
+                    font-size: 0.95rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    box-shadow: 0 4px 15px rgba(201, 169, 110, 0.2);
+                    transition: transform 0.2s, box-shadow 0.2s;
+                ">Entendido, ¡gracias!</button>
+
+                <div style="
+                    margin-top: 16px;
+                    font-size: 0.65rem;
+                    color: rgba(255, 255, 255, 0.25);
+                    font-family: monospace;
+                ">
+                    MAE Version 1.06 05Junio/2026
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.body.style.overflow = 'hidden';
+
+        // Animate in
+        setTimeout(() => {
+            modal.style.opacity = '1';
+            const content = modal.querySelector('.modal-content');
+            if (content) {
+                content.style.transform = 'scale(1)';
+                content.style.opacity = '1';
+            }
+        }, 50);
+
+        const closeModal = () => {
+            modal.style.opacity = '0';
+            const content = modal.querySelector('.modal-content');
+            if (content) {
+                content.style.transform = 'scale(0.9)';
+                content.style.opacity = '0';
+            }
+            setTimeout(() => {
+                modal.remove();
+                document.body.style.overflow = 'auto';
+            }, 300);
+            localStorage.setItem(storageKey, 'true');
+        };
+
+        const closeBtn = modal.querySelector('#closeAnnouncementBtn');
+        const ackBtn = modal.querySelector('#ackAnnouncementBtn');
+
+        if (closeBtn) closeBtn.onclick = closeModal;
+        if (ackBtn) ackBtn.onclick = closeModal;
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+    }
 
     return {
         openProfileModal,

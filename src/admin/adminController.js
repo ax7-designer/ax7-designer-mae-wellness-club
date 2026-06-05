@@ -936,8 +936,8 @@ export function initAdminController(state, controllers) {
                 const d = new Date(state.selectedDateISO + 'T12:00:00');
                 const timeInput = document.getElementById('adminClassTime');
                 if (d.getDay() === 6) {
-                    if (timeInput) timeInput.value = "08:00";
-                    showToast('Nota: Los sábados únicamente operamos a las 8:00 AM', 'info');
+                    if (timeInput) timeInput.value = "09:00";
+                    showToast('Nota: Los sábados únicamente operamos a las 9:00 AM', 'info');
                 }
 
                 updateRecurrencePreview();
@@ -973,8 +973,8 @@ export function initAdminController(state, controllers) {
             const rawNote = document.getElementById('adminClassNote').value;
 
             const dCheck = new Date(state.selectedDateISO + 'T12:00:00');
-            if (dCheck.getDay() === 6 && time !== "08:00") {
-                return showToast('Error: Los sábados únicamente se permiten clases a las 08:00 AM', 'error');
+            if (dCheck.getDay() === 6 && time !== "09:00") {
+                return showToast('Error: Los sábados únicamente se permiten clases a las 09:00 AM', 'error');
             }
 
             const note = `[T:${time}]${rawNote}`;
@@ -1009,10 +1009,10 @@ export function initAdminController(state, controllers) {
 
                     let finalNote = note;
                     if (dayNum === 6) {
-                        finalNote = `[T:08:00]${rawNote}`;
+                        finalNote = `[T:09:00]${rawNote}`;
                     }
 
-                    classesToInsert.push({ ...baseClass, date: iso, note: finalNote, class_time: dayNum === 6 ? '08:00' : time });
+                    classesToInsert.push({ ...baseClass, date: iso, note: finalNote, class_time: dayNum === 6 ? '09:00' : time });
                 }
             }
 

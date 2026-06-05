@@ -224,10 +224,10 @@ BEGIN
 
     -- Audit ledger entry for credit deduction
     INSERT INTO credit_ledger (
-      user_id, amount, transaction_type, previous_balance, new_balance,
+      user_id, admin_id, amount, transaction_type, previous_balance, new_balance,
       reference_id, credit_type, notes
     ) VALUES (
-      p_user_id, -1, 'class_reservation', v_old_credits, v_new_credits,
+      p_user_id, p_admin_id, -1, 'class_reservation', v_old_credits, v_new_credits,
       p_class_id::text, v_credit_col,
       'Reserva asistida por admin: ' || v_admin_email
     );

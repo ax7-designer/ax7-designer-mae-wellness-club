@@ -183,8 +183,7 @@ export function initClassController(state, controllers) {
                 .filter(cls => {
                     if (!cls.hasValidTime) return false;
                     const dayNum = d.getDay();
-                    if (dayNum === 6 && cls.time !== "08:00") return false;
-                    if (dayNum === 0) return false;
+                    if (dayNum === 0) return false; // Sunday always inactive
                     return true;
                 });
 
