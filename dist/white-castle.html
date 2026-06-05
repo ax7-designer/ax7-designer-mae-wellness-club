@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dojo de Himeji | Entrenador de The White Castle</title>
+    <meta
+      name="description"
+      content="Simulador educativo local para aprender el juego base de The White Castle con asistente estratégico guiado."
+    />
+    <script type="module" crossorigin src="/assets/whiteCastle-D_sA_EWT.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-MGmjhzsv.js">
+    <link rel="stylesheet" crossorigin href="/assets/whiteCastle-CarIwfWd.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="board-panel" aria-label="Tablero de entrenamiento">
+        <header class="topbar">
+          <div>
+            <p class="kicker">Himeji, era Edo</p>
+            <h1>Dojo de estrategia del Castillo Blanco</h1>
+          </div>
+          <div class="round-meter" aria-live="polite">
+            <span id="roundLabel">Ronda 1 de 3</span>
+            <strong id="turnLabel">Turno 1 de 3</strong>
+          </div>
+        </header>
+
+        <section class="status-strip" aria-label="Estado del clan">
+          <article>
+            <span>Honor</span>
+            <strong id="scoreValue">0</strong>
+          </article>
+          <article>
+            <span>Monedas</span>
+            <strong id="coinsValue">5</strong>
+          </article>
+          <article>
+            <span>Arroz</span>
+            <strong id="riceValue">3</strong>
+          </article>
+          <article>
+            <span>Hierro</span>
+            <strong id="ironValue">2</strong>
+          </article>
+          <article>
+            <span>Nacar</span>
+            <strong id="pearlValue">1</strong>
+          </article>
+          <article>
+            <span>Influencia</span>
+            <strong id="influenceValue">0</strong>
+          </article>
+        </section>
+
+        <section class="lesson-band" aria-label="Leccion actual">
+          <div>
+            <p id="lessonTitle">El primer mandato</p>
+            <h2 id="lessonText">
+              El castillo solo concede nueve decisiones. Elige dados que
+              conviertan pocos recursos en presencia duradera.
+            </h2>
+          </div>
+          <button class="ghost-button" id="lessonButton" type="button">
+            Cambiar consejo
+          </button>
+        </section>
+
+        <section class="game-grid">
+          <div class="map-area">
+            <div class="castle-scene" aria-hidden="true">
+              <div class="moon"></div>
+              <div class="tower tower-left"></div>
+              <div class="tower tower-main"></div>
+              <div class="tower tower-right"></div>
+              <div class="wall"></div>
+              <div class="garden-line"></div>
+            </div>
+
+            <section class="dice-market" aria-label="Puentes de dados">
+              <div class="section-heading">
+                <h2>Puentes</h2>
+                <p>Selecciona un dado y luego una orden del mismo color.</p>
+              </div>
+              <div class="bridge-grid" id="diceMarket"></div>
+            </section>
+
+            <section class="action-board" aria-label="Ordenes disponibles">
+              <div class="section-heading">
+                <h2>Ordenes del daimio</h2>
+                <p>El valor del dado ajusta el coste o la ganancia.</p>
+              </div>
+              <div class="action-grid" id="actionBoard"></div>
+            </section>
+          </div>
+
+          <aside class="assistant-panel" aria-label="Asistente estrategico">
+            <div class="assistant-head">
+              <div>
+                <p class="kicker">Asistente</p>
+                <h2>Consejero del clan</h2>
+              </div>
+              <button
+                class="icon-button"
+                id="hintButton"
+                type="button"
+                title="Sugerir jugada"
+                aria-label="Sugerir jugada"
+              >
+                ?
+              </button>
+            </div>
+            <div class="assistant-card" id="assistantMessage" aria-live="polite">
+              Elige un dado. Te indicare que orden aprovecha mejor tus recursos
+              y el tempo de la ronda.
+            </div>
+            <div class="advisor-grid" id="advisorGrid"></div>
+
+            <div class="tabs" role="tablist" aria-label="Guia de aprendizaje">
+              <button class="tab active" data-tab="strategy" type="button">
+                Estrategia
+              </button>
+              <button class="tab" data-tab="rules" type="button">Reglas</button>
+              <button class="tab" data-tab="history" type="button">
+                Narrativa
+              </button>
+            </div>
+            <div class="tab-panel" id="tabPanel"></div>
+
+            <section class="log-panel" aria-label="Cronica de partida">
+              <h3>Cronica</h3>
+              <ol id="gameLog"></ol>
+            </section>
+          </aside>
+        </section>
+      </section>
+
+      <aside class="side-rail" aria-label="Control de partida">
+        <section>
+          <h2>Tu clan</h2>
+          <div class="clan-board" id="clanBoard"></div>
+        </section>
+        <section>
+          <h2>Rivales</h2>
+          <div class="rivals" id="rivals"></div>
+        </section>
+        <section class="controls">
+          <button class="primary-button" id="confirmButton" type="button">
+            Ejecutar orden
+          </button>
+          <button class="ghost-button" id="undoButton" type="button">
+            Deshacer seleccion
+          </button>
+          <button class="ghost-button" id="newGameButton" type="button">
+            Nueva partida
+          </button>
+        </section>
+      </aside>
+    </main>
+
+    <dialog class="result-dialog" id="resultDialog">
+      <div>
+        <p class="kicker">Audiencia final</p>
+        <h2 id="resultTitle">El castillo juzga tu legado</h2>
+        <p id="resultText"></p>
+        <button class="primary-button" id="closeResultButton" type="button">
+          Volver al dojo
+        </button>
+      </div>
+    </dialog>
+
+  </body>
+</html>

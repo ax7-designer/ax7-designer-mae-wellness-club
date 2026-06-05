@@ -1,6 +1,7 @@
 .env
 node_modules/
-dist/
+# dist/ is intentionally tracked so Hostinger can serve the compiled build
+# dist/
 
 # Stripe batch scripts (contain secret keys — never commit these)
 create-stripe-links.mjs

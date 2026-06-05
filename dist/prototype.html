@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="es-419">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mae Wellness Club | Rediseño Luxury UI/UX</title>
+    
+    <!-- Google Fonts: Outfit + Playfair Display -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,700&display=swap" rel="stylesheet" />
+
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- Local & Prototype CSS -->
+    <script type="module" crossorigin src="/assets/prototype-B4rrtHes.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-MGmjhzsv.js">
+    <link rel="stylesheet" crossorigin href="/assets/prototype-D0KEj-Z_.css">
+    <link rel="stylesheet" crossorigin href="/assets/styles-DSVoNfIL.css">
+  </head>
+  <body>
+
+    <!-- 1. LUXURY FIXED NAVBAR -->
+    <nav class="luxury-navbar" id="luxNavbar">
+      <div class="container nav-flex">
+        <div class="logo-container">
+          <img src="/assets/mae_logo-BqIojz3f.png" alt="Mae Wellness Club" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+          <div class="brand-words">
+            <span class="brand-main">MAE</span>
+            <span class="brand-sub">wellness club</span>
+          </div>
+        </div>
+        
+        <ul class="nav-menu">
+          <li class="nav-item active"><a href="#luxHero">Inicio</a></li>
+          <li class="nav-item"><a href="#disciplineSplit">Disciplinas</a></li>
+          <li class="nav-item"><a href="#luxBooking">Reservar</a></li>
+          <li class="nav-item"><a href="#luxPricing">Paquetes</a></li>
+          <li class="nav-item"><a href="#luxAbout">Nosotros</a></li>
+        </ul>
+
+        <div class="nav-user-actions">
+          <button class="btn-profile-trigger" id="profileTriggerBtn">
+            <i class="fa-regular fa-user"></i>
+            <span id="profileTriggerText">Iniciar Sesión</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- 2. ATMOSPHERIC CINEMATIC HERO SECTION -->
+    <header class="luxury-hero" id="luxHero">
+      <div class="hero-backdrop"></div>
+      <div class="hero-overlay"></div>
+      
+      <!-- gold dust particles -->
+      <div class="gold-dust" style="left:10%; top:20%; --dy: -40px; animation-duration: 8s;"></div>
+      <div class="gold-dust" style="left:30%; top:60%; --dy: -80px; animation-duration: 12s;"></div>
+      <div class="gold-dust" style="left:75%; top:15%; --dy: -60px; animation-duration: 10s;"></div>
+      <div class="gold-dust" style="left:85%; top:70%; --dy: -90px; animation-duration: 14s;"></div>
+
+      <div class="hero-content">
+        <span class="hero-eyebrow">EL CLUB BOUTIQUE EN CHETUMAL</span>
+        <img src="/assets/mae_logo-BqIojz3f.png" alt="MAE Logo" class="hero-main-logo" />
+        <h2 class="hero-tagline">
+          Donde el esfuerzo físico se encuentra con el bienestar total.<br />
+          <em>Transforma tu cuerpo, eleva tu mente.</em>
+        </h2>
+        <div class="hero-actions">
+          <a href="#luxBooking" class="btn-luxury">Reserva Tu Lugar</a>
+          <a href="#luxPricing" class="btn-luxury-outline">Ver Paquetes</a>
+        </div>
+      </div>
+
+      <!-- FLOATING FAST-RESERVE WIDGET (LUXURY UX ELEMENT) -->
+      <div class="fast-reserve-card">
+        <div class="fast-field">
+          <label>¿Qué deseas entrenar?</label>
+          <select id="fastDisciplineSelect">
+            <option value="Pilates">Pilates Reformer</option>
+            <option value="Indoor Cycling">Indoor Cycling</option>
+            <option value="Train">Train (Funcional)</option>
+          </select>
+        </div>
+        <div class="fast-field">
+          <label>Elige la Fecha</label>
+          <input type="date" id="fastDateInput" />
+        </div>
+        <div class="fast-field">
+          <label>Horario Disponible</label>
+          <select id="fastTimeSelect">
+            <option value="07:00">07:00 AM</option>
+            <option value="08:00">08:00 AM</option>
+            <option value="18:00">06:00 PM</option>
+            <option value="19:00">07:00 PM</option>
+          </select>
+        </div>
+        <button class="btn-luxury" id="fastReserveSubmitBtn">Buscar Spot</button>
+      </div>
+    </header>
+
+    <!-- 3. SPLIT DISCIPLINE SHOWCASE -->
+    <section class="discipline-cards" id="disciplineSplit" style="height: 65vh; min-height: 480px; margin-top:-2px;">
+      <div class="disc-card scroll-reveal" style="--delay: 0s">
+        <div class="disc-card-img pilates-img"></div>
+        <div class="disc-card-overlay"></div>
+        <div class="disc-card-content">
+          <h2 class="disc-card-title">Pilates Reformer</h2>
+          <p class="disc-card-desc">Equilibrio dinámico, resistencia muscular y postura impecable sobre camas de reformer de última generación.</p>
+          <a href="#luxBooking" class="disc-card-link">Explorar Horarios <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+      <div class="disc-card scroll-reveal" style="--delay: 0.1s">
+        <div class="disc-card-img train-img"></div>
+        <div class="disc-card-overlay"></div>
+        <div class="disc-card-content">
+          <h2 class="disc-card-title">Train</h2>
+          <p class="disc-card-desc">Fuerza inteligente y acondicionamiento integral en zonas funcionales diseñadas para desafiarte.</p>
+          <a href="#luxBooking" class="disc-card-link">Explorar Horarios <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+      <div class="disc-card scroll-reveal" style="--delay: 0.2s">
+        <div class="disc-card-img cycling-img"></div>
+        <div class="disc-card-overlay"></div>
+        <div class="disc-card-content">
+          <h2 class="disc-card-title">Indoor Cycling</h2>
+          <p class="disc-card-desc">Una experiencia sensorial inmersiva al ritmo del beat. Cardio intenso que libera mente y alma.</p>
+          <a href="#luxBooking" class="disc-card-link">Explorar Horarios <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. LUXURY BOOKING INTERACTION (RESERVA TU LUGAR) -->
+    <section class="section-container" id="luxBooking" style="background:#080706; padding: 120px 0;">
+      <div class="container">
+        <h2 class="luxury-title">Reserva Tu Lugar</h2>
+        <p class="luxury-subtitle">Elige el día, tu clase, y selecciona tu spot favorito en el estudio</p>
+
+        <!-- Dynamic Horizontal Date Ribbon -->
+        <div class="luxury-date-strip" id="luxDateStrip">
+          <!-- Populated by JS -->
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top:30px; align-items: start;" id="bookingMainGrid">
+          
+          <!-- LEFT PANEL: Dynamic Session/Class List -->
+          <div>
+            <div class="discipline-filter-bar" style="margin-bottom:20px; display:flex; gap:10px;">
+              <button class="filter-btn active" data-discipline="all"><i class="fa-solid fa-layer-group"></i> Todas</button>
+              <button class="filter-btn" data-discipline="Pilates"><i class="fa-solid fa-child-reaching"></i> Pilates</button>
+              <button class="filter-btn" data-discipline="Train"><i class="fa-solid fa-dumbbell"></i> Train</button>
+              <button class="filter-btn" data-discipline="Indoor Cycling"><i class="fa-solid fa-bicycle"></i> Indoor</button>
+            </div>
+
+            <div class="class-view" style="background:transparent; padding:0; border:none; box-shadow:none;">
+              <h3 id="bookingDayDisplay" style="font-family:var(--font-serif); font-size:1.6rem; color:#fff; margin-bottom:20px;">Clases del Día</h3>
+              
+              <div class="class-list-luxury" id="luxClassList">
+                <!-- Session list items populated dynamically by script -->
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT PANEL: 3D-like Interactive Studio Map -->
+          <div class="glass-panel" style="padding: 30px; border: var(--border-glow);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+              <h3 style="font-family:var(--font-serif); font-size:1.4rem;" id="studioMapTitle">Mapa de Spots</h3>
+              <div style="display:flex; gap:15px; font-size:0.75rem; color:var(--text-muted);">
+                <span><i class="fa-solid fa-circle" style="color:var(--text-gold); font-size:0.6rem;"></i> Libre</span>
+                <span><i class="fa-solid fa-circle" style="color:rgba(255,255,255,0.06); font-size:0.6rem;"></i> Ocupado</span>
+                <span><i class="fa-solid fa-circle" style="color:#fff; font-size:0.6rem;"></i> Seleccionado</span>
+              </div>
+            </div>
+
+            <!-- The Visual Studio Area -->
+            <div class="studio-map-container" id="studioMapArea">
+              <!-- Dynamically populated room layout goes here -->
+              <div style="text-align:center; padding: 40px; color:var(--text-muted);">
+                <i class="fa-solid fa-calendar-day" style="font-size:2.5rem; margin-bottom:15px; color:rgba(201,169,110,0.3);"></i>
+                <p>Selecciona una clase a la izquierda para cargar la distribución del salón.</p>
+              </div>
+            </div>
+
+            <!-- Spot Coach spotlight info inside map -->
+            <div id="mapCoachSpotlight" style="display:none; margin-top:25px; align-items:center; gap:15px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
+              <img id="mapCoachImg" src="" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:1px solid var(--text-gold);" />
+              <div>
+                <h4 style="font-size:0.95rem; color:#fff;" id="mapCoachName">Coach Name</h4>
+                <p style="font-size:0.75rem; color:var(--text-muted);" id="mapCoachInfo">Pilates Coach</p>
+              </div>
+              <div style="margin-left:auto; text-align:right;">
+                <span style="font-size:0.7rem; text-transform:uppercase; color:var(--text-gold); font-weight:700; letter-spacing:1px;">Nota del día</span>
+                <p id="mapClassNote" style="font-size:0.8rem; color:var(--text-muted); font-style:italic;">Traer toalla de microfibra.</p>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. LUXURY PRICING SECTION WITH DYNAMIC GLOW CARDS -->
+    <section class="section-container" id="luxPricing" style="background:#0f0d0b; padding: 120px 0;">
+      <div class="container">
+        <h2 class="luxury-title">Adquirir Sesiones</h2>
+        <p class="luxury-subtitle">Elige el plan ideal para tu rutina. Pagos rápidos y seguros</p>
+
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:30px; margin-top:40px;">
+          
+          <!-- CARD 1: Pilates Reformer / Train Individual -->
+          <div class="glow-card" id="pricingCard1">
+            <div class="card-glow-bg"></div>
+            <div class="glow-card-content">
+              <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--text-gold);">Individual</span>
+              <h3 style="font-family:var(--font-serif); font-size:1.8rem; margin:15px 0 8px 0; color:#fff;">Sesión Única</h3>
+              <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:30px;">Acceso a 1 sesión de Pilates Reformer o Train.</p>
+              
+              <div style="font-size:2.8rem; font-weight:800; color:#fff; margin-bottom:30px;">$250<span style="font-size:1rem; font-weight:400; color:var(--text-muted);"> / clase</span></div>
+              
+              <ul style="list-style:none; line-height:2.2; font-size:0.85rem; color:var(--text-muted); margin-bottom:40px;">
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> Válido por 30 días</li>
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> Acceso a vestidores</li>
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> Reserva en línea al instante</li>
+              </ul>
+              
+              <button class="btn-luxury-outline" style="width:100%;" onclick="mockPurchase('Individual', 250)">Adquirir Clase</button>
+            </div>
+          </div>
+
+          <!-- CARD 2: Pilates & Train Unlimited Mensual -->
+          <div class="glow-card" id="pricingCard2" style="border-color:var(--text-gold); box-shadow:0 15px 40px rgba(201,169,110,0.06);">
+            <div class="card-glow-bg"></div>
+            <span style="position:absolute; top:20px; right:20px; background:var(--gold-gradient); color:var(--bg-deep); font-size:0.65rem; font-weight:800; text-transform:uppercase; padding:4px 12px; border-radius:20px; letter-spacing:1px;">El Más Popular</span>
+            <div class="glow-card-content">
+              <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--text-gold);">Mensualidad</span>
+              <h3 style="font-family:var(--font-serif); font-size:1.8rem; margin:15px 0 8px 0; color:#fff;">Ilimitado Pilates & Train</h3>
+              <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:30px;">Consistencia total con reservas ilimitadas.</p>
+              
+              <div style="font-size:2.8rem; font-weight:800; color:#fff; margin-bottom:30px;">$1,500<span style="font-size:1rem; font-weight:400; color:var(--text-muted);"> / mes</span></div>
+              
+              <ul style="list-style:none; line-height:2.2; font-size:0.85rem; color:var(--text-muted); margin-bottom:40px;">
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> Clases ilimitadas en Pilates/Train</li>
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> Cancelación flexible (hasta 2h antes)</li>
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> Acceso prioritario a clases</li>
+              </ul>
+              
+              <button class="btn-luxury" style="width:100%;" onclick="mockPurchase('Ilimitado Pilates', 1500)">Adquirir Mensualidad</button>
+            </div>
+          </div>
+
+          <!-- CARD 3: VIP All-Access Membership -->
+          <div class="glow-card" id="pricingCard3">
+            <div class="card-glow-bg"></div>
+            <div class="glow-card-content">
+              <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--text-gold);">Membresía VIP</span>
+              <h3 style="font-family:var(--font-serif); font-size:1.8rem; margin:15px 0 8px 0; color:#fff;">All-In Wellness Pass</h3>
+              <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:30px;">El pase premium que lo incluye absolutamente todo.</p>
+              
+              <div style="font-size:2.8rem; font-weight:800; color:#fff; margin-bottom:30px;">$2,399<span style="font-size:1rem; font-weight:400; color:var(--text-muted);"> / mes</span></div>
+              
+              <ul style="list-style:none; line-height:2.2; font-size:0.85rem; color:var(--text-muted); margin-bottom:40px;">
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> Acceso a todas las disciplinas</li>
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> 3 Bebidas del bar incluidas por semana</li>
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> Merchandising oficial de Mae de cortesía</li>
+                <li><i class="fa-solid fa-check" style="color:var(--text-gold); margin-right:10px;"></i> Servicio de ludoteca gratuito</li>
+              </ul>
+              
+              <button class="btn-luxury-outline" style="width:100%;" onclick="mockPurchase('Membresía VIP All-In', 2399)">Unirse a VIP</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. HIGH-FIDELITY RIGHT SLIDE-OVER CHECKOUT DRAWER -->
+    <aside class="checkout-drawer" id="checkoutDrawer">
+      <div class="drawer-handle"></div>
+      <button class="drawer-close" id="drawerCloseBtn">&times;</button>
+      
+      <div class="drawer-header">
+        <h2>Detalle de tu Clase</h2>
+        <p>Estás a punto de confirmar tu spot</p>
+      </div>
+
+      <div class="drawer-details-card">
+        <div class="detail-row">
+          <span class="detail-label">Disciplina</span>
+          <span class="detail-value" id="drawerDiscipline">Pilates Reformer</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Coach</span>
+          <span class="detail-value" id="drawerCoach">Coach Valeria</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Fecha y Hora</span>
+          <span class="detail-value" id="drawerDateTime">Miércoles 20, 08:00 AM</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Spot Elegido</span>
+          <span class="detail-value highlight-gold" id="drawerSpot">Lugar #3</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Tus Créditos Restantes</span>
+          <span class="detail-value" id="drawerCreditsCount" style="color:#2a9d8f;">--</span>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <p style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin-bottom:15px; line-height:1.4;">
+          Al reservar, descontaremos un crédito de tu balance. Podrás cancelar esta clase hasta 2 horas antes del inicio sin penalización.
+        </p>
+        
+        <!-- Interactive Slide/Hold confirm button -->
+        <div class="btn-slide-confirm" id="slideConfirmBtn">
+          <div class="slide-slider" id="slideSlider">
+            <i class="fa-solid fa-chevron-right"></i>
+          </div>
+          <span id="slideText">Desliza para Confirmar</span>
+        </div>
+      </div>
+
+      <!-- SUCCESS CONFIRMATION MODAL STATE -->
+      <div class="success-screen" id="successScreen">
+        <div class="success-checkmark">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <h2 style="font-family:var(--font-serif); font-size:1.8rem; color:#fff; margin-bottom:12px; text-align:center;">¡Lugar Reservado!</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem; text-align:center; line-height:1.5; margin-bottom:35px;" id="successMsg">
+          Tu reserva para el **Lugar #3** ha sido registrada con éxito en nuestro sistema boutique.
+        </p>
+        <button class="btn-luxury" id="successDoneBtn" style="width:100%;">Listo, Volver</button>
+      </div>
+    </aside>
+
+    <!-- 7. SANDBOX LOGIN MODAL (FRICTIONLESS) -->
+    <div class="login-modal-overlay" id="sandboxLoginModal">
+      <div class="login-modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+          <h2 style="font-family:var(--font-serif); font-size:1.6rem; color:#fff;">Iniciar Sesión Sandbox</h2>
+          <button class="drawer-close" style="position:static; font-size:1.5rem;" id="loginCloseBtn">&times;</button>
+        </div>
+        
+        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:25px; line-height:1.5;">
+          Accede instantáneamente con una cuenta de demostración para probar la reserva interactiva sin registros complejos.
+        </p>
+
+        <button class="btn-luxury" style="width:100%; display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:15px;" id="btnGoogleSandbox">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="Google" />
+          Continuar con Google
+        </button>
+
+        <div style="text-align:center; margin:15px 0; color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;">ó ingresa un correo de prueba</div>
+
+        <form id="sandboxLoginForm" style="display:flex; flex-direction:column; gap:16px;">
+          <div class="fast-field">
+            <label>Correo Electrónico</label>
+            <input type="email" id="sandboxEmail" placeholder="cliente@maewellness.com" required value="demo.alumni@maewellness.com" />
+          </div>
+          <button type="submit" class="btn-luxury-outline" style="width:100%;">Ingresar Instantáneamente</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 8. MOCK PROFILE / BALANCE DRAWER -->
+    <aside class="checkout-drawer" id="profileDrawer" style="z-index: 1500;">
+      <div class="drawer-handle"></div>
+      <button class="drawer-close" id="profileDrawerCloseBtn">&times;</button>
+      
+      <div class="drawer-header">
+        <h2 id="profileDrawerGreeting">Hola, Team Mae</h2>
+        <p>Tu balance de créditos y membresías</p>
+      </div>
+
+      <div class="drawer-details-card" style="background:rgba(42, 157, 143, 0.08); border-color:rgba(42,157,143,0.2);">
+        <div style="text-align:center; padding:15px 0;">
+          <span style="font-size:0.72rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:1px;">Tus Sesiones Disponibles</span>
+          <div style="font-size:3.5rem; font-weight:800; color:#2a9d8f; margin:5px 0;" id="profileCreditsCountTotal">12</div>
+          <p style="font-size:0.8rem; color:var(--text-muted);" id="profileActivePlanLabel">Membresía Ilimitada Mensual</p>
+        </div>
+      </div>
+
+      <!-- Credit breakdown categories -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:30px;">
+        <div style="background:rgba(255,255,255,0.02); border:var(--border-muted); border-radius:10px; padding:15px; text-align:center;">
+          <i class="fa-solid fa-child-reaching" style="color:var(--text-gold); font-size:1.1rem; margin-bottom:6px;"></i>
+          <h4 style="font-size:1.3rem; color:#fff;" id="profileCreditsPilates">4</h4>
+          <span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Pilates</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:var(--border-muted); border-radius:10px; padding:15px; text-align:center;">
+          <i class="fa-solid fa-bicycle" style="color:var(--text-gold); font-size:1.1rem; margin-bottom:6px;"></i>
+          <h4 style="font-size:1.3rem; color:#fff;" id="profileCreditsCycling">4</h4>
+          <span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Indoor Cycling</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:var(--border-muted); border-radius:10px; padding:15px; text-align:center;">
+          <i class="fa-solid fa-dumbbell" style="color:var(--text-gold); font-size:1.1rem; margin-bottom:6px;"></i>
+          <h4 style="font-size:1.3rem; color:#fff;" id="profileCreditsTrain">4</h4>
+          <span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Train</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:var(--border-muted); border-radius:10px; padding:15px; text-align:center;">
+          <i class="fa-solid fa-crown" style="color:#2a9d8f; font-size:1.1rem; margin-bottom:6px;"></i>
+          <h4 style="font-size:1.3rem; color:#2a9d8f;" id="profileCreditsVip">0</h4>
+          <span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Créditos VIP</span>
+        </div>
+      </div>
+
+      <!-- User Active Reservations list -->
+      <div>
+        <h4 style="font-family:var(--font-serif); font-size:1.1rem; color:#fff; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
+          <i class="fa-regular fa-calendar-check" style="color:var(--text-gold);"></i> Mis Próximas Reservas
+        </h4>
+        <div style="display:flex; flex-direction:column; gap:10px; max-height:220px; overflow-y:auto;" id="profileReservationsList">
+          <!-- Active list of bookings dynamically managed -->
+        </div>
+      </div>
+
+      <div class="drawer-footer" style="margin-top:auto; padding-top:25px; border-top:var(--border-muted);">
+        <button class="btn-luxury-outline" style="width:100%; border-color:#e63946; color:#e63946;" id="profileLogoutBtn">Cerrar Sesión Sandbox</button>
+      </div>
+    </aside>
+    
+    <!-- MOBILE BOTTOM NAVIGATION TAB BAR -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav">
+      <a href="#luxHero" class="mobile-nav-item active" id="mTabHero">
+        <i class="fa-solid fa-house"></i>
+        <span>Inicio</span>
+      </a>
+      <a href="#disciplineSplit" class="mobile-nav-item" id="mTabClasses">
+        <i class="fa-solid fa-dumbbell"></i>
+        <span>Clases</span>
+      </a>
+      <a href="#luxBooking" class="mobile-nav-item" id="mTabBooking">
+        <i class="fa-solid fa-calendar-days"></i>
+        <span>Reservar</span>
+      </a>
+      <a href="#luxPricing" class="mobile-nav-item" id="mTabPricing">
+        <i class="fa-solid fa-gem"></i>
+        <span>Planes</span>
+      </a>
+      <a href="#" class="mobile-nav-item" id="mTabProfile">
+        <i class="fa-solid fa-user"></i>
+        <span>Perfil</span>
+      </a>
+    </nav>
+
+    <footer class="footer" style="background:#0a0907; border-top:var(--border-muted); padding: 80px 0;">
+      <div class="container" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:30px;">
+        <div>
+          <img src="/assets/mae_logo-BqIojz3f.png" style="height:60px; margin-bottom:15px;" />
+          <p style="font-size:0.8rem; color:var(--text-muted);">&copy; 2026 Mae Wellness Club Redesign Prototype.</p>
+        </div>
+        <div style="display:flex; gap:30px;">
+          <a href="#" style="color:var(--text-muted); font-size:1.3rem;"><i class="fa-brands fa-instagram"></i></a>
+          <a href="#" style="color:var(--text-muted); font-size:1.3rem;"><i class="fa-brands fa-facebook"></i></a>
+          <a href="#" style="color:var(--text-muted); font-size:1.3rem;"><i class="fa-brands fa-whatsapp"></i></a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Script references -->
+  </body>
+</html>
