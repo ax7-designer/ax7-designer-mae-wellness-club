@@ -8,6 +8,16 @@ const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 /**
  * Initializes classes list and calendar strip controller.
  */
+function renderScheduleState(container, { icon, title, message, tone = 'neutral' }) {
+    if (!container) return;
+    container.innerHTML = `
+        <div class="schedule-empty-state ${tone}">
+            <i class="fa-solid ${icon}" aria-hidden="true"></i>
+            <h3>${title}</h3>
+            <p>${message}</p>
+        </div>`;
+}
+
 export function initClassController(state, controllers) {
     const dateScrollContainer = document.getElementById('dateScrollContainer');
     const dailyClassesList = document.getElementById('dailyClassesList');
@@ -95,8 +105,16 @@ export function initClassController(state, controllers) {
         const isInactive = state.inactiveDays.weekdays.has(d.getDay()) || state.inactiveDays.specific.has(state.selectedDateISO);
 
         if (isInactive) {
-            dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;"><i class="fa-solid fa-moon" style="color:var(--accent-gold);margin-right:8px;"></i>Este día está marcado como inactivo.</p>`;
-            if (selectedClassProfile) selectedClassProfile.style.display = 'none';
+            renderScheduleState(dailyClassesList, {
+                icon: 'fa-moon',
+                title: 'Dia de descanso',
+                message: 'Este dia esta marcado como inactivo. Elige otra fecha para reservar tu lugar.',
+                tone: 'calm'
+            });
+            if (selectedClassProfile) {
+                selectedClassProfile.style.display = 'none';
+                selectedClassProfile.setAttribute('aria-hidden', 'true');
+            }
             if (spotsGrid) spotsGrid.innerHTML = '';
             return;
         }
@@ -119,8 +137,16 @@ export function initClassController(state, controllers) {
         }
 
         if (!didRenderFromCache) {
-            dailyClassesList.innerHTML = '<p style="text-align:center;color:var(--accent-gold);"><i class="fa-solid fa-spinner fa-spin"></i> Cargando clases...</p>';
-            if (selectedClassProfile) selectedClassProfile.style.display = 'none';
+            renderScheduleState(dailyClassesList, {
+                icon: 'fa-spinner fa-spin',
+                title: 'Cargando horario',
+                message: 'Estamos consultando las clases disponibles para esta fecha.',
+                tone: 'loading'
+            });
+            if (selectedClassProfile) {
+                selectedClassProfile.style.display = 'none';
+                selectedClassProfile.setAttribute('aria-hidden', 'true');
+            }
             if (spotsGrid) spotsGrid.innerHTML = '';
         }
 
@@ -130,7 +156,12 @@ export function initClassController(state, controllers) {
 
             if (error) {
                 if (!didRenderFromCache) {
-                    dailyClassesList.innerHTML = `<p style="color:#ff5555;">Error: ${error.message}</p>`;
+                    renderScheduleState(dailyClassesList, {
+                        icon: 'fa-triangle-exclamation',
+                        title: 'No pudimos cargar el horario',
+                        message: 'Intenta de nuevo en unos segundos o escribenos por WhatsApp para ayudarte.',
+                        tone: 'error'
+                    });
                 }
                 return;
             }
@@ -145,14 +176,27 @@ export function initClassController(state, controllers) {
         } catch (err) {
             console.error("Fetch classes error:", err);
             if (!didRenderFromCache) {
-                dailyClassesList.innerHTML = `<p style="color:#ff5555;">Error de conexión</p>`;
+                renderScheduleState(dailyClassesList, {
+                    icon: 'fa-wifi',
+                    title: 'Conexion interrumpida',
+                    message: 'Revisa tu conexion o intenta de nuevo. Tu reserva no se vera afectada.',
+                    tone: 'error'
+                });
             }
         }
 
         function doRender(classesArray) {
             if (!classesArray || classesArray.length === 0) {
-                dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;">No hay clases programadas para este día.</p>`;
-                if (selectedClassProfile) selectedClassProfile.style.display = 'none';
+                renderScheduleState(dailyClassesList, {
+                    icon: 'fa-calendar-plus',
+                    title: 'Sin clases programadas',
+                    message: 'Aun no hay clases para esta fecha. Revisa otra fecha o escribenos para confirmar disponibilidad.',
+                    tone: 'neutral'
+                });
+                if (selectedClassProfile) {
+                    selectedClassProfile.style.display = 'none';
+                    selectedClassProfile.setAttribute('aria-hidden', 'true');
+                }
                 if (spotsGrid) spotsGrid.innerHTML = '';
                 return;
             }
@@ -221,9 +265,19 @@ export function initClassController(state, controllers) {
             if (dayClasses.length === 0) {
                 let emptyMsg = "No hay clases disponibles para estos criterios.";
                 if (state.selectedDateISO === todayISO && state.activeDisciplineFilter === 'all') {
-                    emptyMsg = "¡Todas las clases de hoy han terminado! Nos vemos mañana para seguir dándolo todo. ✨";
+                    emptyMsg = "Todas las clases de hoy han terminado. Nos vemos manana para seguir dando el maximo.";
                 }
-                dailyClassesList.innerHTML = `<p style="text-align:center;color:var(--text-muted);font-style:italic;margin-top:20px;padding: 0 20px;line-height:1.5;">${emptyMsg}</p>`;
+                renderScheduleState(dailyClassesList, {
+                    icon: 'fa-filter-circle-xmark',
+                    title: 'Sin horarios disponibles',
+                    message: emptyMsg,
+                    tone: 'neutral'
+                });
+                if (selectedClassProfile) {
+                    selectedClassProfile.style.display = 'none';
+                    selectedClassProfile.setAttribute('aria-hidden', 'true');
+                }
+                if (spotsGrid) spotsGrid.innerHTML = '';
                 return;
             }
 

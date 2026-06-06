@@ -49,6 +49,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobileMenu = document.getElementById('mobileMenu');
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const mobileClose = document.getElementById('mobileMenuClose');
+    let lastFocusedElement = null;
+
+    function syncModalAccessibility(modal) {
+        const isActive = modal.classList.contains('active');
+        modal.setAttribute('aria-hidden', String(!isActive));
+
+        if (!isActive) return;
+        const focusTarget = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        focusTarget?.focus({ preventScroll: true });
+    }
+
+    function enhanceModalAccessibility() {
+        const modals = document.querySelectorAll('.modal-overlay');
+        modals.forEach((modal) => {
+            if (modal.dataset.a11yReady === 'true') return;
+            modal.dataset.a11yReady = 'true';
+            if (!modal.hasAttribute('role')) modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            syncModalAccessibility(modal);
+
+            const observer = new MutationObserver(() => {
+                if (modal.classList.contains('active')) {
+                    lastFocusedElement = document.activeElement;
+                }
+                syncModalAccessibility(modal);
+                if (!modal.classList.contains('active')) {
+                    lastFocusedElement?.focus?.({ preventScroll: true });
+                }
+            });
+            observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+        });
+    }
 
     // Instantiate controllers collection object to resolve cross-controller references
     const controllers = {
@@ -63,6 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     controllers.classController = initClassController(state, controllers);
     controllers.bookingController = initBookingController(state, controllers);
     controllers.adminController = initAdminController(state, controllers);
+    enhanceModalAccessibility();
 
     /* -----------------------------------------------
        1. SCROLL REVEAL (IntersectionObserver)
@@ -120,6 +153,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const mobileLinks = document.querySelectorAll('.mobile-nav-link');
     mobileLinks.forEach(link => link.addEventListener('click', closeMobileMenu));
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Tab') return;
+        const activeModal = document.querySelector('.modal-overlay.active');
+        if (!activeModal) return;
+
+        const focusable = Array.from(activeModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+            .filter((el) => !el.disabled && el.offsetParent !== null);
+        if (focusable.length === 0) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+
+    const modalObserver = new MutationObserver(enhanceModalAccessibility);
+    modalObserver.observe(document.body, { childList: true, subtree: true });
 
     /* -----------------------------------------------
        4. REALTIME SUBSCRIPTION EVENT HUB

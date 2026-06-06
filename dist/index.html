@@ -102,6 +102,7 @@
       href="https://eccemvedcdfilnjkmopg.supabase.co"
       crossorigin
     />
+    <link rel="preload" as="image" href="/assets/portada_deseada-CBz5VJEP.png" fetchpriority="high" />
     <link
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
       rel="stylesheet"
@@ -111,7 +112,15 @@
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      />
+    </noscript>
 
     <!-- Custom CSS -->
     <link
@@ -120,10 +129,10 @@
       href="/assets/mae_logo-BqIojz3f.png"
       alt="Mae Wellness Club"
     />
-    <script type="module" crossorigin src="/assets/main-ogPdubIW.js"></script>
+    <script type="module" crossorigin src="/assets/main-C-G1G0gY.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-MGmjhzsv.js">
-    <link rel="modulepreload" crossorigin href="/assets/script-CsZqurgN.js">
-    <link rel="stylesheet" crossorigin href="/assets/styles-DSVoNfIL.css">
+    <link rel="modulepreload" crossorigin href="/assets/script-71GW9LCJ.js">
+    <link rel="stylesheet" crossorigin href="/assets/styles-CNimUNGs.css">
   </head>
 
   <body>
@@ -676,6 +685,7 @@
             class="coach-profile float-anim"
             id="selectedClassProfile"
             style="display: none"
+            aria-hidden="true"
           >
             <div class="coach-img-wrapper">
               <img
@@ -686,8 +696,10 @@
                 style="opacity: 0"
               />
             </div>
-            <h3 class="coach-name" id="scCoachName">Coach Name</h3>
-            <p class="coach-discipline" id="scCoachDiscipline">Discipline</p>
+            <h3 class="coach-name" id="scCoachName">Clase seleccionada</h3>
+            <p class="coach-discipline" id="scCoachDiscipline">
+              Elige un horario para ver disponibilidad
+            </p>
             <p
               class="coach-note"
               id="scCoachNote"
@@ -928,13 +940,20 @@
     </a>
 
     <!-- Login Modal -->
-    <div class="modal-overlay" id="loginModal">
+    <div
+      class="modal-overlay"
+      id="loginModal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="loginModalTitle"
+    >
       <div class="modal-content">
         <button class="close-btn" id="closeModal" aria-label="Cerrar modal">
           &times;
         </button>
         <div class="modal-header" id="loginModalHeader">
-          <h2>Iniciar Sesión</h2>
+          <h2 id="loginModalTitle">Iniciar Sesión</h2>
           <p>
             Ingresa para reservar tu clase/lugar y administrar tus paquetes.
           </p>
@@ -1061,7 +1080,14 @@
     </div>
 
     <!-- Profile Modal (shown when logged-in user clicks their name) -->
-    <div class="modal-overlay" id="profileModal">
+    <div
+      class="modal-overlay"
+      id="profileModal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="profileModalTitle"
+    >
       <div class="modal-content profile-modal-content">
         <button
           class="close-btn"
@@ -1104,7 +1130,7 @@
               >MODO ADMIN</span
             >
           </div>
-          <h2 id="profileGreeting">Mi Perfil</h2>
+          <h2 id="profileModalTitle"><span id="profileGreeting">Mi Perfil</span></h2>
           <p>Personaliza tu identidad en Team Mae</p>
         </div>
 
@@ -1525,7 +1551,14 @@
     </div>
 
     <!-- Admin Modal for creating a new class -->
-    <div class="modal-overlay" id="adminClassModal">
+    <div
+      class="modal-overlay"
+      id="adminClassModal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="adminClassModalTitle"
+    >
       <div class="modal-content">
         <button
           class="close-btn"
@@ -1535,7 +1568,7 @@
           &times;
         </button>
         <div class="modal-header">
-          <h2>Programar Nueva Clase</h2>
+          <h2 id="adminClassModalTitle">Programar Nueva Clase</h2>
           <p>Configura la clase para el día seleccionado.</p>
         </div>
         <form class="login-form" id="adminClassForm">
@@ -1736,7 +1769,14 @@
     </div>
 
     <!-- Inactive Day Modal -->
-    <div class="modal-overlay" id="inactiveDayModal">
+    <div
+      class="modal-overlay"
+      id="inactiveDayModal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="inactiveDayModalTitle"
+    >
       <div class="modal-content" style="max-width: 480px">
         <button
           class="close-btn"
@@ -1746,7 +1786,7 @@
           &times;
         </button>
         <div class="modal-header">
-          <h2>
+          <h2 id="inactiveDayModalTitle">
             <i class="fa-solid fa-moon" style="color: var(--accent-gold)"></i>
             Día Inactivo
           </h2>
@@ -1828,7 +1868,14 @@
     </div>
 
     <!-- Reservation Confirmation Modal -->
-    <div class="modal-overlay" id="reserveModal">
+    <div
+      class="modal-overlay"
+      id="reserveModal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="reserveModalTitle"
+    >
       <div class="modal-content" style="max-width: 420px">
         <button class="close-btn" id="closeReserveModal" aria-label="Cerrar">
           &times;
@@ -1842,7 +1889,7 @@
               margin-bottom: 10px;
             "
           ></i>
-          <h2>Confirmar Reserva</h2>
+          <h2 id="reserveModalTitle">Confirmar Reserva</h2>
           <p id="reserveClassLabel" style="color: var(--text-muted)">
             Clase · Coach
           </p>
@@ -1910,7 +1957,14 @@
     </div>
 
     <!-- Reset Password Modal -->
-    <div class="modal-overlay" id="resetPasswordModal">
+    <div
+      class="modal-overlay"
+      id="resetPasswordModal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="resetPasswordModalTitle"
+    >
       <div class="modal-content" style="max-width: 400px">
         <div class="modal-header">
           <i
@@ -1921,7 +1975,7 @@
               margin-bottom: 10px;
             "
           ></i>
-          <h2>Nueva Contraseña</h2>
+          <h2 id="resetPasswordModalTitle">Nueva Contraseña</h2>
           <p>Establece tu nueva clave de acceso para Team Mae.</p>
         </div>
         <form id="resetPasswordForm" style="margin-top: 24px">

@@ -196,6 +196,7 @@ export function initBookingController(state, controllers) {
 
         if (selectedClassProfile) {
             selectedClassProfile.style.display = 'block';
+            selectedClassProfile.removeAttribute('aria-hidden');
             setTimeout(() => {
                 selectedClassProfile.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
@@ -207,6 +208,7 @@ export function initBookingController(state, controllers) {
     function renderSpotsGrid(cls) {
         if (!spotsGrid || !cls) return;
         spotsGrid.innerHTML = '';
+        spotsGrid.setAttribute('aria-live', 'polite');
         const totalCapacity = cls.capacity;
         const occupied = cls.occupied_spots || [];
         const normalized = occupied.map(s => typeof s === 'number' ? { spot: s, userId: null, displayName: 'Miembro' } : s);
